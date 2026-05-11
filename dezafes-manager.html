@@ -1,0 +1,2007 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>デザフェス出店管理</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --primary: #6366f1;
+  --primary-light: #e0e7ff;
+  --accent: #ec4899;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --bg: #f1f5f9;
+  --card: #ffffff;
+  --text: #1e293b;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  --radius: 14px;
+  --nav-h: 64px;
+  --nav-w: 220px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding-bottom: var(--nav-h);
+}
+/* ── Header ── */
+.header {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: white;
+  padding: 16px 20px 14px;
+  position: sticky; top: 0; z-index: 100;
+  box-shadow: 0 2px 8px rgba(99,102,241,.35);
+}
+.header h1 { font-size: 17px; font-weight: 800; letter-spacing: -.3px; }
+.header p  { font-size: 11px; opacity: .75; margin-top: 2px; }
+/* ── Bottom Nav ── */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: white; border-top: 1px solid var(--border);
+  display: flex; z-index: 200;
+  height: var(--nav-h);
+}
+.nav-btn {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  border: none; background: none; cursor: pointer;
+  color: var(--muted); font-size: 10px; gap: 3px;
+  transition: color .2s; padding: 6px 2px;
+}
+.nav-btn.active { color: var(--primary); }
+.nav-btn .icon { font-size: 20px; line-height: 1; }
+/* ── Layout ── */
+.main { padding: 16px; max-width: 900px; margin: 0 auto; }
+.section { display: none; }
+.section.active { display: block; }
+/* ── Cards ── */
+.card {
+  background: var(--card); border-radius: var(--radius);
+  padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.08); margin-bottom: 12px;
+}
+.card-title {
+  font-size: 13px; font-weight: 700; color: var(--muted);
+  margin-bottom: 12px; display: flex; align-items: center; gap: 6px;
+  text-transform: uppercase; letter-spacing: .4px;
+}
+/* ── Stats ── */
+.stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 12px; }
+.stat-card {
+  background: var(--card); border-radius: var(--radius);
+  padding: 14px 16px; box-shadow: 0 1px 4px rgba(0,0,0,.08);
+}
+.stat-label { font-size: 11px; color: var(--muted); }
+.stat-value { font-size: 26px; font-weight: 800; color: var(--primary); line-height: 1.1; margin-top: 2px; }
+.stat-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
+/* ── Section header ── */
+.sec-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.sec-title { font-size: 20px; font-weight: 800; }
+/* ── List items ── */
+.list-item {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  padding: 13px 0; border-bottom: 1px solid var(--border);
+}
+.list-item:last-child { border-bottom: none; }
+.list-title { font-weight: 700; font-size: 14px; }
+.list-sub { font-size: 12px; color: var(--muted); margin-top: 3px; }
+.list-actions { display: flex; gap: 6px; flex-shrink: 0; margin-left: 8px; }
+/* ── Buttons ── */
+.btn {
+  padding: 10px 18px; border-radius: 10px; border: none; cursor: pointer;
+  font-size: 14px; font-weight: 700; transition: opacity .15s, transform .1s;
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.btn:active { opacity: .8; transform: scale(.97); }
+.btn-primary { background: var(--primary); color: white; }
+.btn-accent  { background: var(--accent); color: white; }
+.btn-success { background: var(--success); color: white; }
+.btn-danger  { background: var(--danger); color: white; }
+.btn-ghost   { background: var(--bg); color: var(--text); border: 1.5px solid var(--border); }
+.btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
+.btn-xs { padding: 4px 9px; font-size: 11px; border-radius: 6px; }
+.btn-icon-sm {
+  background: var(--bg); border: 1.5px solid var(--border);
+  border-radius: 8px; cursor: pointer; padding: 5px 8px;
+  font-size: 14px; line-height: 1; transition: background .15s;
+}
+.btn-icon-sm:hover { background: var(--border); }
+/* ── FAB ── */
+.fab {
+  position: fixed; bottom: calc(var(--nav-h) + 14px); right: 18px;
+  width: 52px; height: 52px; border-radius: 50%;
+  background: var(--primary); color: white; border: none;
+  font-size: 26px; cursor: pointer;
+  box-shadow: 0 4px 16px rgba(99,102,241,.45);
+  display: flex; align-items: center; justify-content: center; z-index: 150;
+  transition: transform .15s;
+}
+.fab:active { transform: scale(.93); }
+/* ── Modal ── */
+.overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.5);
+  display: flex; align-items: flex-end; z-index: 300;
+  opacity: 0; visibility: hidden; transition: all .25s;
+}
+.overlay.open { opacity: 1; visibility: visible; }
+.modal {
+  background: white; width: 100%; max-height: 92vh;
+  border-radius: 22px 22px 0 0; padding: 0;
+  overflow: hidden; display: flex; flex-direction: column;
+  transform: translateY(100%); transition: transform .3s cubic-bezier(.32,.72,0,1);
+}
+.overlay.open .modal { transform: translateY(0); }
+.modal-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 14px auto 0; flex-shrink: 0; }
+.modal-header { padding: 14px 20px 0; flex-shrink: 0; }
+.modal-title { font-size: 18px; font-weight: 800; margin-bottom: 2px; }
+.modal-body { padding: 16px 20px 30px; overflow-y: auto; flex: 1; }
+/* ── Form ── */
+.form-group { margin-bottom: 14px; }
+.form-label { font-size: 13px; font-weight: 700; margin-bottom: 5px; display: block; color: var(--text); }
+.form-input, .form-select, .form-textarea {
+  width: 100%; padding: 11px 13px; border: 1.5px solid var(--border);
+  border-radius: 10px; font-size: 14px; outline: none;
+  transition: border-color .2s; background: white; color: var(--text);
+  font-family: inherit;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--primary); }
+.form-textarea { resize: vertical; min-height: 70px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+/* ── Component cards in product form ── */
+.comp-card {
+  border: 1.5px solid var(--border); border-radius: 10px;
+  padding: 12px; margin-bottom: 8px; background: var(--bg);
+}
+.comp-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+/* ── Progress ── */
+.progress-wrap { margin-top: 6px; }
+.progress-bar { height: 7px; background: var(--border); border-radius: 4px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 4px; transition: width .4s; }
+.progress-fill.p-primary { background: var(--primary); }
+.progress-fill.p-success { background: var(--success); }
+.progress-fill.p-warning { background: var(--warning); }
+/* ── Badges ── */
+.badge {
+  display: inline-block; padding: 2px 9px; border-radius: 20px;
+  font-size: 11px; font-weight: 700;
+}
+.badge-blue    { background: var(--primary-light); color: var(--primary); }
+.badge-green   { background: #dcfce7; color: var(--success); }
+.badge-yellow  { background: #fef3c7; color: #92400e; }
+.badge-red     { background: #fee2e2; color: var(--danger); }
+.badge-purple  { background: #f3e8ff; color: #7e22ce; }
+.badge-gray    { background: var(--bg); color: var(--muted); border: 1px solid var(--border); }
+/* ── Price advice ── */
+.price-tier {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 13px 14px; border-radius: 10px; margin-bottom: 8px;
+}
+.price-tier-label { font-size: 13px; font-weight: 700; }
+.price-tier-note  { font-size: 11px; margin-top: 2px; opacity: .75; }
+.price-tier-value { font-size: 20px; font-weight: 800; }
+.tier-min { background: #ecfdf5; }
+.tier-std { background: #e0e7ff; }
+.tier-pre { background: #fdf4ff; }
+/* ── Cost breakdown ── */
+.cost-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.cost-row:last-child { border-bottom: none; }
+.cost-row.total { font-weight: 800; font-size: 15px; color: var(--primary); }
+/* ── Inner tabs ── */
+.inner-tabs { display: flex; gap: 6px; margin-bottom: 14px; overflow-x: auto; padding-bottom: 2px; }
+.inner-tab {
+  padding: 6px 14px; border-radius: 20px; border: 1.5px solid var(--border);
+  font-size: 13px; cursor: pointer; white-space: nowrap;
+  background: white; color: var(--muted); font-weight: 600; transition: all .15s;
+}
+.inner-tab.active { background: var(--primary); border-color: var(--primary); color: white; }
+/* ── Chart ── */
+.chart-wrap { position: relative; height: 220px; }
+/* ── Toast ── */
+.toast {
+  position: fixed; bottom: calc(var(--nav-h) + 12px); left: 50%;
+  transform: translateX(-50%) translateY(12px);
+  background: #1e293b; color: white;
+  padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600;
+  opacity: 0; transition: all .3s; z-index: 400; white-space: nowrap;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+/* ── Info box ── */
+.info-box {
+  background: var(--primary-light); border-radius: 10px;
+  padding: 12px 14px; font-size: 13px; color: var(--primary); margin-bottom: 14px;
+  line-height: 1.5;
+}
+/* ── Inventory card ── */
+.inv-card {
+  background: var(--card); border-radius: var(--radius);
+  padding: 14px 16px; box-shadow: 0 1px 4px rgba(0,0,0,.08); margin-bottom: 10px;
+}
+.inv-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+.inv-numbers { display: flex; gap: 16px; }
+.inv-num { text-align: center; }
+.inv-num-val { font-size: 22px; font-weight: 800; line-height: 1; }
+.inv-num-label { font-size: 10px; color: var(--muted); margin-top: 2px; }
+/* ── Empty state ── */
+.empty { text-align: center; padding: 48px 20px; color: var(--muted); }
+.empty .ico { font-size: 48px; margin-bottom: 10px; }
+.empty p { font-size: 14px; }
+/* ── Sales table ── */
+.sale-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 11px 0; border-bottom: 1px solid var(--border); font-size: 13px;
+}
+.sale-row:last-child { border-bottom: none; }
+/* ── Divider ── */
+.hr { height: 1px; background: var(--border); margin: 14px 0; }
+/* ── Color chips ── */
+.color-dot {
+  display: inline-block; width: 14px; height: 14px; border-radius: 50%;
+  border: 1.5px solid rgba(0,0,0,.15); flex-shrink: 0;
+}
+.color-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 8px 3px 5px; border-radius: 20px;
+  background: var(--bg); border: 1.5px solid var(--border);
+  font-size: 12px; font-weight: 600;
+}
+.color-dots-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+/* ── TODO ── */
+.todo-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 0; border-bottom: 1px solid var(--border);
+}
+.todo-item:last-child { border-bottom: none; }
+.todo-item.done .todo-title { text-decoration: line-through; color: var(--muted); }
+.todo-cb { width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer; flex-shrink: 0; margin-top: 1px; }
+.todo-title { font-weight: 700; font-size: 14px; line-height: 1.3; }
+.todo-meta  { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.todo-progress-bar { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin-bottom: 14px; }
+.todo-progress-fill { height: 100%; background: var(--success); border-radius: 4px; transition: width .4s; }
+.badge-overdue { background: #fee2e2; color: var(--danger); }
+.badge-soon    { background: #fef3c7; color: #92400e; }
+.badge-ok      { background: #dcfce7; color: var(--success); }
+/* ── Product type toggle ── */
+.type-toggle { display: flex; border: 1.5px solid var(--border); border-radius: 10px; overflow: hidden; }
+.type-btn {
+  flex: 1; padding: 10px 8px; border: none; background: white; cursor: pointer;
+  font-size: 13px; font-weight: 700; color: var(--muted); transition: all .15s;
+}
+.type-btn.active { background: var(--primary); color: white; }
+/* ── Outsource cost card ── */
+.outsource-card {
+  border: 1.5px solid #bfdbfe; border-radius: 10px;
+  padding: 12px; margin-bottom: 8px; background: #eff6ff;
+}
+/* ── Unit cost calc preview ── */
+.calc-preview {
+  background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 10px;
+  padding: 10px 13px; font-size: 13px; color: #166534;
+  display: flex; align-items: center; gap: 8px; margin-top: -6px; margin-bottom: 14px;
+}
+.calc-preview.inactive { background: var(--bg); border-color: var(--border); color: var(--muted); }
+.calc-preview-val { font-size: 17px; font-weight: 800; }
+/* ── Utilities ── */
+.flex { display: flex; } .items-center { align-items: center; } .justify-between { justify-content: space-between; }
+.gap-2 { gap: 8px; } .gap-1 { gap: 4px; }
+.text-right { text-align: right; } .text-center { text-align: center; }
+.text-muted { color: var(--muted); } .text-sm { font-size: 12px; }
+.text-primary { color: var(--primary); } .text-success { color: var(--success); }
+.text-danger { color: var(--danger); } .text-warning { color: var(--warning); }
+.font-bold { font-weight: 700; } .font-black { font-weight: 800; }
+.mt-1 { margin-top: 4px; } .mt-2 { margin-top: 8px; } .mt-3 { margin-top: 14px; }
+.mb-1 { margin-bottom: 4px; } .mb-2 { margin-bottom: 8px; } .mb-3 { margin-bottom: 14px; }
+.w-full { width: 100%; }
+/* ── Desktop overrides ── */
+@media (min-width: 768px) {
+  body { padding-bottom: 0; padding-left: var(--nav-w); }
+  .bottom-nav {
+    width: var(--nav-w); height: 100vh;
+    flex-direction: column; top: 0; bottom: auto;
+    border-top: none; border-right: 1px solid var(--border);
+    padding: 24px 0; justify-content: flex-start; height: auto; min-height: 100vh;
+  }
+  .nav-btn {
+    flex-direction: row; justify-content: flex-start;
+    padding: 12px 24px; font-size: 14px; font-weight: 600; gap: 12px;
+    width: 100%; border-radius: 0; flex: none;
+  }
+  .nav-btn .icon { font-size: 18px; }
+  .fab { bottom: 28px; }
+  .overlay { align-items: center; }
+  .modal {
+    max-width: 560px; margin: auto; border-radius: 20px;
+    max-height: 88vh; transform: translateY(20px) scale(.96);
+  }
+  .overlay.open .modal { transform: translateY(0) scale(1); }
+  .stats-grid { grid-template-columns: repeat(4, 1fr); }
+  .chart-wrap { height: 280px; }
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <h1>🎨 デザフェス出店管理</h1>
+  <p id="headerSub">読み込み中…</p>
+</header>
+
+<nav class="bottom-nav">
+  <button class="nav-btn active" onclick="nav('home')" data-nav="home">
+    <span class="icon">🏠</span><span>ホーム</span>
+  </button>
+  <button class="nav-btn" onclick="nav('materials')" data-nav="materials">
+    <span class="icon">🧪</span><span>素材</span>
+  </button>
+  <button class="nav-btn" onclick="nav('products')" data-nav="products">
+    <span class="icon">🏷️</span><span>商品</span>
+  </button>
+  <button class="nav-btn" onclick="nav('todo')" data-nav="todo">
+    <span class="icon">✅</span><span>TODO</span>
+  </button>
+  <button class="nav-btn" onclick="nav('sales')" data-nav="sales">
+    <span class="icon">💰</span><span>販売</span>
+  </button>
+</nav>
+
+<main class="main">
+
+<!-- ═══════════════ HOME ═══════════════ -->
+<div id="sec-home" class="section active">
+  <div class="inner-tabs" id="homeTabs">
+    <button class="inner-tab active" onclick="homeTab('dashboard')">ダッシュボード</button>
+    <button class="inner-tab" onclick="homeTab('costs')">固定費</button>
+    <button class="inner-tab" onclick="homeTab('reports')">レポート</button>
+  </div>
+  <!-- Dashboard -->
+  <div id="home-dashboard">
+    <div class="stats-grid" id="statsGrid"></div>
+    <div class="card" id="productProgress"></div>
+    <div class="card" id="recentSales"></div>
+    <div class="card" style="padding:14px 16px">
+      <div class="card-title">📲 データ管理</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6">
+        エクスポートしたJSONファイルを別のデバイスでインポートすると、データを引き継げます。<br>
+        <strong>PC → スマホ</strong>（設定済みデータを持ち込む）・<strong>スマホ → PC</strong>（当日の販売記録を戻す）どちらにも使えます。
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary" style="flex:1;justify-content:center" onclick="exportData()">
+          ⬇️ エクスポート
+        </button>
+        <button class="btn btn-ghost" style="flex:1;justify-content:center;border:1.5px solid var(--border)" onclick="importData()">
+          ⬆️ インポート
+        </button>
+      </div>
+    </div>
+  </div>
+  <!-- Fixed Costs -->
+  <div id="home-costs" style="display:none">
+    <div class="sec-header">
+      <div class="sec-title">固定費管理</div>
+      <button class="btn btn-primary btn-sm" onclick="openModal('fixedCost')">＋ 追加</button>
+    </div>
+    <div class="info-box">💡 会場費・交通費・梱包資材費など、特定商品に紐づかない費用を登録します。原価計算時に全商品の目標個数で按分されます。</div>
+    <div class="card" id="fixedCostList"></div>
+    <div class="card mt-2">
+      <div class="card-title">💴 固定費 合計</div>
+      <div style="font-size:28px;font-weight:800;color:var(--primary)" id="fixedCostTotal">¥0</div>
+    </div>
+  </div>
+  <!-- Reports -->
+  <div id="home-reports" style="display:none">
+    <div class="card mb-3">
+      <div class="card-title">📈 日別売上推移</div>
+      <div class="chart-wrap"><canvas id="chartSalesLine"></canvas></div>
+    </div>
+    <div class="card mb-3">
+      <div class="card-title">🥧 商品別売上構成</div>
+      <div class="chart-wrap" style="height:200px"><canvas id="chartProductPie"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">📊 商品別 売上・原価比較</div>
+      <div class="chart-wrap"><canvas id="chartCostBar"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ MATERIALS ═══════════════ -->
+<div id="sec-materials" class="section">
+  <div class="sec-header">
+    <div class="sec-title">素材管理</div>
+    <button class="btn btn-primary btn-sm" onclick="openModal('material')">＋ 追加</button>
+  </div>
+  <div class="info-box">💡 レジン・フィラメントなど使用する素材を単位と単価で登録します。商品に紐づけて原価を自動計算します。</div>
+  <div class="card" id="materialList"></div>
+</div>
+
+<!-- ═══════════════ PRODUCTS ═══════════════ -->
+<div id="sec-products" class="section">
+  <div class="inner-tabs" id="productTabs">
+    <button class="inner-tab active" onclick="productTab('list')">商品一覧</button>
+    <button class="inner-tab" onclick="productTab('inventory')">在庫・制作</button>
+  </div>
+  <!-- 商品一覧 -->
+  <div id="prod-list">
+    <div class="sec-header" style="margin-bottom:12px">
+      <div class="sec-title" style="font-size:16px">商品一覧</div>
+      <button class="btn btn-primary btn-sm" onclick="openModal('product')">＋ 追加</button>
+    </div>
+    <div id="productList"></div>
+  </div>
+  <!-- 在庫・制作 -->
+  <div id="prod-inventory" style="display:none">
+    <div class="info-box">💡 完成数を入力してください。カラーを登録した商品はカラーごとに管理できます。在庫 ＝ 完成数 − 販売数</div>
+    <div id="inventoryList"></div>
+  </div>
+</div>
+
+<!-- ═══════════════ TODO ═══════════════ -->
+<div id="sec-todo" class="section">
+  <div class="sec-header">
+    <div class="sec-title">TODO</div>
+    <button class="btn btn-primary btn-sm" onclick="openModal('todo')">＋ 追加</button>
+  </div>
+  <div class="card" id="todoProgress" style="padding:12px 16px"></div>
+  <div class="card mt-2" id="todoList"></div>
+</div>
+
+<!-- ═══════════════ SALES ═══════════════ -->
+<div id="sec-sales" class="section">
+  <div class="inner-tabs">
+    <button class="inner-tab active" onclick="salesTab('entry')">販売記録</button>
+    <button class="inner-tab" onclick="salesTab('history')">履歴</button>
+  </div>
+  <div id="sales-entry">
+    <div class="card">
+      <div class="card-title">🛒 販売を記録する</div>
+      <div class="form-group">
+        <label class="form-label">日付</label>
+        <input type="date" id="saleDate" class="form-input">
+      </div>
+      <div class="form-group">
+        <label class="form-label">商品</label>
+        <select id="saleProduct" class="form-select" onchange="onSaleProductChange()">
+          <option value="">-- 商品を選択 --</option>
+        </select>
+      </div>
+      <div class="form-group" id="saleColorGroup" style="display:none">
+        <label class="form-label">カラー</label>
+        <select id="saleColor" class="form-select"></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">販売個数</label>
+          <input type="number" id="saleQty" class="form-input" min="1" value="1">
+        </div>
+        <div class="form-group">
+          <label class="form-label">販売単価 (円)</label>
+          <input type="number" id="salePrice" class="form-input" min="0" placeholder="0">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">メモ（任意）</label>
+        <input type="text" id="saleNote" class="form-input" placeholder="例: まとめ買い割引など">
+      </div>
+      <button class="btn btn-success w-full" onclick="recordSale()">✅ 販売を記録</button>
+    </div>
+    <div class="card mt-2" id="saleTodaySummary"></div>
+  </div>
+  <div id="sales-history" style="display:none">
+    <div class="card" id="saleHistoryList"></div>
+  </div>
+</div>
+
+</main>
+
+<!-- ═══════════════ FAB ═══════════════ -->
+<button class="fab" id="fabBtn" onclick="fabAction()">＋</button>
+
+<!-- ═══════════════ MODALS ═══════════════ -->
+
+<!-- Material Modal -->
+<div class="overlay" id="overlay-material" onclick="maybeCloseOverlay(event,'material')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header"><div class="modal-title" id="materialModalTitle">素材を追加</div></div>
+    <div class="modal-body">
+      <input type="hidden" id="editMaterialId">
+      <div class="form-group">
+        <label class="form-label">素材名</label>
+        <input type="text" id="matName" class="form-input" placeholder="例: UVレジン、PLAフィラメント">
+      </div>
+      <div class="form-group">
+        <label class="form-label">単位</label>
+        <input type="text" id="matUnit" class="form-input" placeholder="例: g、ml、個">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">購入量</label>
+          <input type="number" id="matBuyQty" class="form-input" min="0" step="any" placeholder="例: 500" oninput="calcMatUnitCost()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">購入金額 (円)</label>
+          <input type="number" id="matBuyPrice" class="form-input" min="0" placeholder="例: 1500" oninput="calcMatUnitCost()">
+        </div>
+      </div>
+      <div id="matCalcPreview" class="calc-preview inactive">
+        <span>💡</span><span id="matCalcText">購入量と購入金額を入力すると単価を自動計算します</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">単価（円/単位）<span style="font-weight:400;color:var(--muted)"> ← 自動入力 or 直接入力</span></label>
+        <input type="number" id="matUnitCost" class="form-input" min="0" step="any" placeholder="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label">在庫量（現在の保有量）</label>
+        <input type="number" id="matStock" class="form-input" min="0" placeholder="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label">メモ（任意）</label>
+        <input type="text" id="matNote" class="form-input" placeholder="例: 購入先、ブランドなど">
+      </div>
+      <button class="btn btn-primary w-full mt-2" onclick="saveMaterial()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Product Modal -->
+<div class="overlay" id="overlay-product" onclick="maybeCloseOverlay(event,'product')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header"><div class="modal-title" id="productModalTitle">商品を追加</div></div>
+    <div class="modal-body">
+      <input type="hidden" id="editProductId">
+      <div class="form-group">
+        <label class="form-label">商品タイプ</label>
+        <div class="type-toggle">
+          <button type="button" class="type-btn active" id="typeHandmade" onclick="setProductType('handmade')">🧰 ハンドメイド</button>
+          <button type="button" class="type-btn" id="typeOutsource" onclick="setProductType('outsource')">🏭 外注</button>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">商品名</label>
+          <input type="text" id="prodName" class="form-input" placeholder="例: キーホルダーS">
+        </div>
+        <div class="form-group">
+          <label class="form-label">カテゴリ</label>
+          <input type="text" id="prodCat" class="form-input" placeholder="例: キーホルダー">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">目標制作数</label>
+          <input type="number" id="prodTarget" class="form-input" min="0" placeholder="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">参考販売価格 (円)</label>
+          <input type="number" id="prodSuggestedPrice" class="form-input" min="0" placeholder="0">
+        </div>
+      </div>
+
+      <div class="hr"></div>
+      <div class="flex justify-between items-center mb-2">
+        <div class="font-bold" style="font-size:14px">🎨 カラー</div>
+        <button class="btn btn-ghost btn-sm" onclick="addColorRow()">＋ カラーを追加</button>
+      </div>
+      <div id="colorRows"></div>
+
+      <!-- 外注費セクション（外注タイプのみ表示） -->
+      <div id="outsourceCostSection" style="display:none">
+        <div class="hr"></div>
+        <div class="flex justify-between items-center mb-2">
+          <div class="font-bold" style="font-size:14px">🏭 外注費内訳</div>
+          <button class="btn btn-ghost btn-sm" onclick="addOutsourceCostRow()">＋ 費用を追加</button>
+        </div>
+        <div class="info-box" style="font-size:12px;padding:9px 12px">
+          グッズ本体代・オプション代など。合計金額と発注数を入力すると1個あたりの費用を自動計算します。
+        </div>
+        <div id="outsourceCostRows"></div>
+      </div>
+
+      <!-- 素材セクション（ハンドメイドのみ表示） -->
+      <div id="materialCostSection">
+        <div class="hr"></div>
+        <div class="flex justify-between items-center mb-2">
+          <div class="font-bold" style="font-size:14px">🧪 使用素材</div>
+          <button class="btn btn-ghost btn-sm" onclick="addComponentRow()">＋ 素材を追加</button>
+        </div>
+      </div>
+      <div id="componentRows"></div>
+
+      <div class="hr"></div>
+      <div class="flex justify-between items-center mb-2">
+        <div class="font-bold" style="font-size:14px">➕ 商品固有の追加費用</div>
+        <button class="btn btn-ghost btn-sm" onclick="addDirectCostRow()">＋ 追加</button>
+      </div>
+      <div class="text-sm text-muted mb-2">梱包資材・シール・タグなど商品1個あたりの費用</div>
+      <div id="directCostRows"></div>
+
+      <button class="btn btn-primary w-full mt-3" onclick="saveProduct()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Fixed Cost Modal -->
+<div class="overlay" id="overlay-fixedCost" onclick="maybeCloseOverlay(event,'fixedCost')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header"><div class="modal-title" id="fixedCostModalTitle">固定費を追加</div></div>
+    <div class="modal-body">
+      <input type="hidden" id="editFixedCostId">
+      <div class="form-group">
+        <label class="form-label">費用名</label>
+        <input type="text" id="fcName" class="form-input" placeholder="例: 会場費、交通費、梱包資材">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">金額 (円)</label>
+          <input type="number" id="fcAmount" class="form-input" min="0" placeholder="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">カテゴリ</label>
+          <select id="fcCategory" class="form-select">
+            <option value="venue">会場・イベント費</option>
+            <option value="transport">交通・配送費</option>
+            <option value="labor">人件費・作業費</option>
+            <option value="material">共通素材費</option>
+            <option value="other">その他</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">メモ（任意）</label>
+        <input type="text" id="fcNote" class="form-input" placeholder="">
+      </div>
+      <button class="btn btn-primary w-full mt-2" onclick="saveFixedCost()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Price Advisor Modal -->
+<div class="overlay" id="overlay-priceAdvisor" onclick="maybeCloseOverlay(event,'priceAdvisor')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header"><div class="modal-title" id="priceAdvisorTitle">💡 価格アドバイス</div></div>
+    <div class="modal-body" id="priceAdvisorBody"></div>
+  </div>
+</div>
+
+<!-- Inventory Update Modal -->
+<div class="overlay" id="overlay-invUpdate" onclick="maybeCloseOverlay(event,'invUpdate')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header"><div class="modal-title" id="invUpdateTitle">制作数を更新</div></div>
+    <div class="modal-body">
+      <input type="hidden" id="invUpdateProductId">
+      <div id="invUpdateBody"></div>
+      <button class="btn btn-primary w-full mt-2" onclick="saveInvUpdate()">更新</button>
+    </div>
+  </div>
+</div>
+
+<!-- TODO Modal -->
+<div class="overlay" id="overlay-todo" onclick="maybeCloseOverlay(event,'todo')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header"><div class="modal-title" id="todoModalTitle">タスクを追加</div></div>
+    <div class="modal-body">
+      <input type="hidden" id="editTodoId">
+      <div class="form-group">
+        <label class="form-label">タスク名</label>
+        <input type="text" id="todoTitle" class="form-input" placeholder="例: ステッカー入稿データ作成">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">期日（任意）</label>
+          <input type="date" id="todoDue" class="form-input">
+        </div>
+        <div class="form-group">
+          <label class="form-label">カテゴリ</label>
+          <select id="todoCat" class="form-select">
+            <option value="make">🎨 商品制作</option>
+            <option value="promo">📢 集客・告知</option>
+            <option value="venue">🏟 会場準備</option>
+            <option value="buy">🛒 購入・発注</option>
+            <option value="other">📌 その他</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">メモ（任意）</label>
+        <input type="text" id="todoNote" class="form-input" placeholder="">
+      </div>
+      <button class="btn btn-primary w-full mt-2" onclick="saveTodo()">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════
+let S = {
+  materials: [],
+  products: [],
+  fixedCosts: [],
+  salesRecords: [],
+  todos: [],
+  _id: 1
+};
+
+function newId() { return (S._id++).toString(); }
+const KEY = 'dezafes_v2';
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} }
+function load() {
+  try {
+    const d = localStorage.getItem(KEY);
+    if (d) S = JSON.parse(d);
+  } catch(e){}
+  // ensure arrays exist
+  S.materials    = S.materials    || [];
+  S.products     = S.products     || [];
+  S.fixedCosts   = S.fixedCosts   || [];
+  S.salesRecords = S.salesRecords || [];
+  S.todos        = S.todos        || [];
+  S._id = S._id || 1;
+}
+
+// ═══════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════
+let currentNav = 'home';
+let currentProductTab = 'list';
+
+function nav(name) {
+  currentNav = name;
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('sec-' + name)?.classList.add('active');
+  document.querySelector(`[data-nav="${name}"]`)?.classList.add('active');
+  const fabBtn = document.getElementById('fabBtn');
+  fabBtn.style.display = name === 'sales' ? 'none' : 'flex';
+  renderSection(name);
+}
+
+function fabAction() {
+  const map = { home: 'fixedCost', materials: 'material', todo: 'todo' };
+  if (currentNav === 'products') {
+    if (currentProductTab === 'list') openModal('product');
+    // inventory tab: no FAB action
+    return;
+  }
+  const m = map[currentNav];
+  if (m) openModal(m);
+}
+
+function productTab(name) {
+  currentProductTab = name;
+  document.getElementById('prod-list').style.display      = name === 'list'      ? '' : 'none';
+  document.getElementById('prod-inventory').style.display = name === 'inventory' ? '' : 'none';
+  document.querySelectorAll('#productTabs .inner-tab').forEach((b,i) => {
+    b.classList.toggle('active', ['list','inventory'][i] === name);
+  });
+  if (name === 'inventory') renderInventory();
+  if (name === 'list')      renderProducts();
+}
+
+// ═══════════════════════════════════════
+// HOME TABS
+// ═══════════════════════════════════════
+let homeTabActive = 'dashboard';
+function homeTab(name) {
+  homeTabActive = name;
+  ['dashboard','costs','reports'].forEach(t => {
+    document.getElementById('home-' + t).style.display = t === name ? '' : 'none';
+  });
+  document.querySelectorAll('#homeTabs .inner-tab').forEach((b,i) => {
+    b.classList.toggle('active', ['dashboard','costs','reports'][i] === name);
+  });
+  if (name === 'reports') renderReports();
+  if (name === 'costs')   renderFixedCosts();
+  if (name === 'dashboard') renderDashboard();
+}
+
+// ═══════════════════════════════════════
+// SALES TABS
+// ═══════════════════════════════════════
+function salesTab(name) {
+  document.getElementById('sales-entry').style.display   = name === 'entry'   ? '' : 'none';
+  document.getElementById('sales-history').style.display = name === 'history' ? '' : 'none';
+  document.querySelectorAll('#sec-sales .inner-tabs .inner-tab').forEach((b,i) => {
+    b.classList.toggle('active', ['entry','history'][i] === name);
+  });
+  if (name === 'history') renderSaleHistory();
+}
+
+// ═══════════════════════════════════════
+// SECTION RENDER ROUTER
+// ═══════════════════════════════════════
+function renderSection(name) {
+  if (name === 'home')      { renderDashboard(); if (homeTabActive === 'reports') renderReports(); }
+  if (name === 'materials') renderMaterials();
+  if (name === 'products')  { if (currentProductTab === 'list') renderProducts(); else renderInventory(); }
+  if (name === 'todo')      renderTodos();
+  if (name === 'sales')     renderSalesSection();
+}
+
+// ═══════════════════════════════════════
+// CALCULATIONS
+// ═══════════════════════════════════════
+function soldQty(productId) {
+  return S.salesRecords.filter(r => r.productId === productId).reduce((s,r) => s + r.qty, 0);
+}
+function soldQtyByColor(productId, colorName) {
+  return S.salesRecords.filter(r => r.productId === productId && r.colorName === colorName).reduce((s,r) => s + r.qty, 0);
+}
+function effectiveProduced(product) {
+  const cols = (product.colors || []).filter(c => (c.producedQty || 0) > 0 || (c.targetQty || 0) > 0);
+  if (cols.length) return cols.reduce((s, c) => s + (c.producedQty || 0), 0);
+  return product.producedQty || 0;
+}
+function effectiveTarget(product) {
+  const cols = (product.colors || []).filter(c => (c.targetQty || 0) > 0);
+  if (cols.length) return cols.reduce((s, c) => s + (c.targetQty || 0), 0);
+  return product.targetQty || 0;
+}
+function stockQty(product) {
+  return effectiveProduced(product) - soldQty(product.id);
+}
+function calcMaterialCost(product) {
+  if (product.type === 'outsource') return 0;
+  return (product.components || []).reduce((sum, c) => {
+    const mat = S.materials.find(m => m.id === c.materialId);
+    if (!mat) return sum;
+    return sum + mat.unitCost * c.amount;
+  }, 0);
+}
+function calcOutsourceCost(product) {
+  if (product.type !== 'outsource') return 0;
+  return (product.outsourceCosts || []).reduce((sum, c) => {
+    // unitPrice is the per-unit cost; support legacy totalAmount/qty format too
+    if (c.unitPrice != null) return sum + (c.unitPrice || 0);
+    return sum + (c.totalAmount || 0) / Math.max(c.qty || 1, 1);
+  }, 0);
+}
+function calcDirectCost(product) {
+  return (product.directCosts || []).reduce((s, c) => s + (c.amount || 0), 0);
+}
+function totalFixedCostAmount() {
+  return S.fixedCosts.reduce((s, c) => s + c.amount, 0);
+}
+function totalTargetQty() {
+  return S.products.reduce((s, p) => s + effectiveTarget(p), 0);
+}
+function fixedCostPerUnit(product) {
+  const total = totalFixedCostAmount();
+  const totalQty = totalTargetQty();
+  if (!totalQty) return 0;
+  const myTarget = effectiveTarget(product);
+  const share = myTarget / totalQty;
+  return (total * share) / Math.max(myTarget, 1);
+}
+function calcTotalCost(product) {
+  return calcMaterialCost(product) + calcOutsourceCost(product) + calcDirectCost(product) + fixedCostPerUnit(product);
+}
+
+function getPriceAdvice(product) {
+  const matCost = calcMaterialCost(product);
+  const outCost = calcOutsourceCost(product);
+  const dirCost = calcDirectCost(product);
+  const fixCost = fixedCostPerUnit(product);
+  const total   = matCost + outCost + dirCost + fixCost;
+  const round100 = v => Math.ceil(v / 100) * 100;
+  return {
+    matCost, outCost, dirCost, fixCost, total,
+    min: round100(total * 1.3),
+    std: round100(total * 2.5),
+    pre: round100(total * 3.5),
+  };
+}
+
+// ═══════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════
+function renderDashboard() {
+  const totalSales = S.salesRecords.reduce((s,r) => s + r.qty * r.unitPrice, 0);
+  const totalSoldQty = S.salesRecords.reduce((s,r) => s + r.qty, 0);
+  const totalStock = S.products.reduce((s,p) => s + Math.max(stockQty(p), 0), 0);
+  const totalTarget = totalTargetQty();
+  const totalProduced = S.products.reduce((s,p) => s + effectiveProduced(p), 0);
+
+  document.getElementById('statsGrid').innerHTML = `
+    <div class="stat-card"><div class="stat-label">💴 累計売上</div><div class="stat-value">¥${fmt(totalSales)}</div><div class="stat-sub">${totalSoldQty}個販売</div></div>
+    <div class="stat-card"><div class="stat-label">📦 在庫合計</div><div class="stat-value">${totalStock}</div><div class="stat-sub">個</div></div>
+    <div class="stat-card"><div class="stat-label">🎯 目標制作</div><div class="stat-value">${totalTarget}</div><div class="stat-sub">個</div></div>
+    <div class="stat-card"><div class="stat-label">✅ 制作完了</div><div class="stat-value">${totalProduced}</div><div class="stat-sub">/ ${totalTarget}個</div></div>
+  `;
+
+  // Product progress
+  const pRows = S.products.map(p => {
+    const tgt   = effectiveTarget(p);
+    const prod  = effectiveProduced(p);
+    const pct   = tgt ? Math.min(100, Math.round(prod / tgt * 100)) : 0;
+    const stock = Math.max(stockQty(p), 0);
+    const color = pct >= 100 ? 'p-success' : pct >= 50 ? 'p-primary' : 'p-warning';
+    return `<div class="list-item">
+      <div style="flex:1">
+        <div class="list-title">${esc(p.name)}</div>
+        <div class="progress-wrap">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:3px">制作 ${prod}/${tgt}個 ・ 在庫 ${stock}個</div>
+          <div class="progress-bar"><div class="progress-fill ${color}" style="width:${pct}%"></div></div>
+        </div>
+      </div>
+      <div style="margin-left:12px;text-align:right">
+        <div class="font-bold text-sm">${pct}%</div>
+        <div class="text-sm text-muted">${badgeStock(stock)}</div>
+      </div>
+    </div>`;
+  }).join('') || '<div class="empty"><div class="ico">📋</div><p>商品がまだ登録されていません</p></div>';
+
+  document.getElementById('productProgress').innerHTML = `<div class="card-title">🎯 商品別 制作進捗</div>${pRows}`;
+
+  // Recent sales
+  const recent = [...S.salesRecords].sort((a,b) => b.date.localeCompare(a.date)).slice(0,5);
+  const rRows = recent.map(r => {
+    const p = S.products.find(x => x.id === r.productId);
+    return `<div class="sale-row">
+      <div>
+        <div class="font-bold text-sm">${esc(p?.name||'不明')}</div>
+        <div class="text-sm text-muted">${r.date} ・ ${r.qty}個</div>
+      </div>
+      <div class="text-right">
+        <div class="font-bold">¥${fmt(r.qty*r.unitPrice)}</div>
+        <div class="text-sm text-muted">@¥${fmt(r.unitPrice)}</div>
+      </div>
+    </div>`;
+  }).join('') || '<div class="text-muted text-sm text-center" style="padding:20px">販売記録がありません</div>';
+  document.getElementById('recentSales').innerHTML = `<div class="card-title">🕐 最近の販売</div>${rRows}`;
+
+  // header sub
+  const today = new Date().toLocaleDateString('ja-JP',{month:'long',day:'numeric'});
+  document.getElementById('headerSub').textContent = `${today} ・ 売上合計 ¥${fmt(totalSales)}`;
+}
+
+function badgeStock(n) {
+  if (n <= 0) return '<span class="badge badge-red">在庫なし</span>';
+  if (n <= 5) return `<span class="badge badge-yellow">残${n}個</span>`;
+  return `<span class="badge badge-green">在庫${n}個</span>`;
+}
+
+// ═══════════════════════════════════════
+// MATERIALS
+// ═══════════════════════════════════════
+function renderMaterials() {
+  const el = document.getElementById('materialList');
+  if (!S.materials.length) {
+    el.innerHTML = '<div class="empty"><div class="ico">🧪</div><p>素材を追加してください</p></div>';
+    return;
+  }
+  el.innerHTML = S.materials.map(m => {
+    const buyInfo = m.buyQty && m.buyPrice
+      ? `<span class="badge badge-green">購入: ${m.buyQty}${esc(m.unit)} / ¥${fmt(m.buyPrice)}</span> `
+      : '';
+    return `
+    <div class="list-item">
+      <div>
+        <div class="list-title">${esc(m.name)}</div>
+        <div class="list-sub" style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:4px">
+          ${buyInfo}<span class="badge badge-blue">¥${(m.unitCost||0).toFixed(2)} / ${esc(m.unit)}</span>
+          <span class="text-muted">在庫: ${m.stock||0}${esc(m.unit)}</span>${m.note ? `<span class="text-muted">・ ${esc(m.note)}</span>` : ''}
+        </div>
+      </div>
+      <div class="list-actions">
+        <button class="btn-icon-sm" onclick="editMaterial('${m.id}')">✏️</button>
+        <button class="btn-icon-sm" onclick="deleteMaterial('${m.id}')">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openModal(type, extra) {
+  if (type === 'material') {
+    document.getElementById('editMaterialId').value = '';
+    document.getElementById('materialModalTitle').textContent = '素材を追加';
+    ['matName','matUnit','matBuyQty','matBuyPrice','matUnitCost','matStock','matNote'].forEach(id => document.getElementById(id).value = '');
+    resetMatCalcPreview();
+  }
+  if (type === 'product') {
+    document.getElementById('editProductId').value = '';
+    document.getElementById('productModalTitle').textContent = '商品を追加';
+    ['prodName','prodCat','prodTarget','prodSuggestedPrice'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('componentRows').innerHTML = '';
+    document.getElementById('directCostRows').innerHTML = '';
+    document.getElementById('colorRows').innerHTML = '';
+    document.getElementById('outsourceCostRows').innerHTML = '';
+    setProductType('handmade');
+  }
+  if (type === 'fixedCost') {
+    document.getElementById('editFixedCostId').value = '';
+    document.getElementById('fixedCostModalTitle').textContent = '固定費を追加';
+    ['fcName','fcAmount','fcNote'].forEach(id => document.getElementById(id).value = '');
+  }
+  if (type === 'todo') {
+    document.getElementById('editTodoId').value = '';
+    document.getElementById('todoModalTitle').textContent = 'タスクを追加';
+    document.getElementById('todoTitle').value = '';
+    document.getElementById('todoDue').value = '';
+    document.getElementById('todoCat').value = 'make';
+    document.getElementById('todoNote').value = '';
+  }
+  showOverlay(type);
+}
+
+function calcMatUnitCost() {
+  const qty   = parseFloat(document.getElementById('matBuyQty').value);
+  const price = parseFloat(document.getElementById('matBuyPrice').value);
+  const unit  = document.getElementById('matUnit').value.trim() || '単位';
+  const preview = document.getElementById('matCalcPreview');
+  const text    = document.getElementById('matCalcText');
+  if (qty > 0 && price > 0) {
+    const unitCost = price / qty;
+    document.getElementById('matUnitCost').value = Math.round(unitCost * 1000) / 1000;
+    preview.className = 'calc-preview';
+    text.innerHTML = `<span class="calc-preview-val">¥${(unitCost).toFixed(2)}</span> / ${esc(unit)}（${fmt(price)}円 ÷ ${qty}${esc(unit)}）`;
+  } else {
+    resetMatCalcPreview();
+  }
+}
+
+function resetMatCalcPreview() {
+  const preview = document.getElementById('matCalcPreview');
+  const text    = document.getElementById('matCalcText');
+  if (!preview) return;
+  preview.className = 'calc-preview inactive';
+  text.textContent = '購入量と購入金額を入力すると単価を自動計算します';
+}
+
+function editMaterial(id) {
+  const m = S.materials.find(x => x.id === id);
+  if (!m) return;
+  document.getElementById('editMaterialId').value = m.id;
+  document.getElementById('materialModalTitle').textContent = '素材を編集';
+  document.getElementById('matName').value = m.name;
+  document.getElementById('matUnit').value = m.unit;
+  document.getElementById('matBuyQty').value   = m.buyQty   || '';
+  document.getElementById('matBuyPrice').value = m.buyPrice || '';
+  document.getElementById('matUnitCost').value = m.unitCost;
+  document.getElementById('matStock').value = m.stock || 0;
+  document.getElementById('matNote').value = m.note || '';
+  if (m.buyQty && m.buyPrice) calcMatUnitCost(); else resetMatCalcPreview();
+  showOverlay('material');
+}
+
+function saveMaterial() {
+  const name     = document.getElementById('matName').value.trim();
+  const unit     = document.getElementById('matUnit').value.trim();
+  const buyQty   = parseFloat(document.getElementById('matBuyQty').value)   || 0;
+  const buyPrice = parseFloat(document.getElementById('matBuyPrice').value) || 0;
+  const unitCost = parseFloat(document.getElementById('matUnitCost').value) || 0;
+  const stock    = parseFloat(document.getElementById('matStock').value)    || 0;
+  const note     = document.getElementById('matNote').value.trim();
+  if (!name || !unit) return toast('素材名と単位を入力してください');
+  const editId = document.getElementById('editMaterialId').value;
+  if (editId) {
+    const m = S.materials.find(x => x.id === editId);
+    Object.assign(m, { name, unit, buyQty, buyPrice, unitCost, stock, note });
+  } else {
+    S.materials.push({ id: newId(), name, unit, buyQty, buyPrice, unitCost, stock, note });
+  }
+  save(); closeOverlay('material'); renderMaterials(); toast('素材を保存しました');
+}
+
+function deleteMaterial(id) {
+  if (!confirm('この素材を削除しますか？')) return;
+  S.materials = S.materials.filter(m => m.id !== id);
+  save(); renderMaterials(); toast('削除しました');
+}
+
+// ═══════════════════════════════════════
+// PRODUCTS
+// ═══════════════════════════════════════
+function renderProducts() {
+  const el = document.getElementById('productList');
+  if (!S.products.length) {
+    el.innerHTML = '<div class="empty"><div class="ico">🏷️</div><p>商品を追加してください</p></div>';
+    return;
+  }
+  el.innerHTML = S.products.map(p => {
+    const cost = calcTotalCost(p);
+    const stock = stockQty(p);
+    const typeBadge = p.type === 'outsource'
+      ? '<span class="badge" style="background:#dbeafe;color:#1d4ed8">🏭 外注</span>'
+      : '<span class="badge" style="background:#dcfce7;color:#166534">🧰 ハンドメイド</span>';
+    const cats = p.category ? `<span class="badge badge-purple">${esc(p.category)}</span>` : '';
+    const colorDots = (p.colors||[]).map(c =>
+      `<span class="color-chip"><span class="color-dot" style="background:${esc(c.hex)}"></span>${esc(c.name)}</span>`
+    ).join('');
+    return `<div class="card mb-2">
+      <div class="flex justify-between items-center mb-2">
+        <div>
+          <div class="font-black" style="font-size:16px">${esc(p.name)}</div>
+          <div class="mt-1 flex gap-1" style="flex-wrap:wrap">${typeBadge} ${cats} ${badgeStock(Math.max(stock,0))}</div>
+          ${colorDots ? `<div class="color-dots-row">${colorDots}</div>` : ''}
+        </div>
+        <div class="list-actions">
+          <button class="btn-icon-sm" onclick="editProduct('${p.id}')">✏️</button>
+          <button class="btn-icon-sm" onclick="deleteProduct('${p.id}')">🗑️</button>
+        </div>
+      </div>
+      <div class="hr" style="margin:8px 0"></div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">
+        <div class="text-center">
+          <div style="font-size:11px;color:var(--muted)">推定原価</div>
+          <div class="font-bold text-danger">¥${fmt(cost)}</div>
+        </div>
+        <div class="text-center">
+          <div style="font-size:11px;color:var(--muted)">参考販売価格</div>
+          <div class="font-bold text-success">¥${fmt(p.suggestedPrice||0)}</div>
+        </div>
+        <div class="text-center">
+          <div style="font-size:11px;color:var(--muted)">利益率</div>
+          <div class="font-bold ${(p.suggestedPrice||0) > cost ? 'text-success' : 'text-danger'}">${p.suggestedPrice && cost ? Math.round((p.suggestedPrice-cost)/p.suggestedPrice*100) : 0}%</div>
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-sm w-full" style="border-color:var(--primary);color:var(--primary)" onclick="showPriceAdvisor('${p.id}')">💡 AI価格アドバイスを見る</button>
+    </div>`;
+  }).join('');
+}
+
+function setProductType(type) {
+  document.getElementById('typeHandmade').classList.toggle('active', type === 'handmade');
+  document.getElementById('typeOutsource').classList.toggle('active', type === 'outsource');
+  document.getElementById('outsourceCostSection').style.display = type === 'outsource' ? '' : 'none';
+  document.getElementById('materialCostSection').style.display  = type === 'outsource' ? 'none' : '';
+  document.getElementById('componentRows').style.display        = type === 'outsource' ? 'none' : '';
+}
+
+function addOutsourceCostRow(data) {
+  const rowId = 'oc_' + Date.now() + Math.random();
+  const div = document.createElement('div');
+  div.className = 'outsource-card';
+  div.id = rowId;
+  div.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <input type="text" class="form-input oc-name" placeholder="費用名（例: ステッカー本体代、カット加工）"
+        value="${esc(data?.name||'')}" style="flex:1;margin-right:8px">
+      <button class="btn-icon-sm" onclick="document.getElementById('${rowId}').remove()">🗑️</button>
+    </div>
+    <div class="form-row" style="margin-bottom:6px">
+      <div>
+        <label style="font-size:11px;font-weight:700;display:block;margin-bottom:4px">1個あたり単価 (円)</label>
+        <input type="number" class="form-input oc-unit" min="0" step="any" placeholder="例: 30"
+          value="${data?.unitPrice||''}" oninput="refreshOcPreview('${rowId}')">
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:700;display:block;margin-bottom:4px">発注数 (個)</label>
+        <input type="number" class="form-input oc-qty" min="1" placeholder="例: 100"
+          value="${data?.qty||''}" oninput="refreshOcPreview('${rowId}')">
+      </div>
+    </div>
+    <div class="oc-preview" id="ocprev_${rowId}" style="font-size:12px;color:#1e40af;font-weight:700"></div>
+  `;
+  document.getElementById('outsourceCostRows').appendChild(div);
+  if (data?.unitPrice && data?.qty) refreshOcPreview(rowId);
+}
+
+function refreshOcPreview(rowId) {
+  const card = document.getElementById(rowId);
+  const unit = parseFloat(card.querySelector('.oc-unit')?.value) || 0;
+  const qty  = parseFloat(card.querySelector('.oc-qty')?.value)  || 0;
+  const prev = document.getElementById('ocprev_' + rowId);
+  if (!prev) return;
+  prev.textContent = (unit > 0 && qty > 0)
+    ? `→ 発注合計 ¥${fmt(unit * qty)}（¥${unit} × ${qty}個）`
+    : '';
+}
+
+function addColorRow(data) {
+  const rowId = 'clr_' + Date.now() + Math.random();
+  const div = document.createElement('div');
+  div.className = 'comp-card';
+  div.id = rowId;
+  div.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <input type="color" class="clr-hex" value="${esc(data?.hex||'#6366f1')}"
+        style="width:40px;height:36px;border:none;background:none;cursor:pointer;padding:0;border-radius:6px;flex-shrink:0">
+      <input type="text" class="form-input clr-name" placeholder="カラー名（例: クリア、ピンク）"
+        value="${esc(data?.name||'')}" style="flex:1;margin:0">
+      <button class="btn-icon-sm" onclick="document.getElementById('${rowId}').remove()">🗑️</button>
+    </div>
+    <div class="form-row">
+      <div>
+        <label style="font-size:11px;font-weight:700;display:block;margin-bottom:4px">目標数</label>
+        <input type="number" class="form-input clr-target" min="0" placeholder="0" value="${data?.targetQty||''}">
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:700;display:block;margin-bottom:4px">完成数</label>
+        <input type="number" class="form-input clr-produced" min="0" placeholder="0" value="${data?.producedQty||''}">
+      </div>
+    </div>
+  `;
+  document.getElementById('colorRows').appendChild(div);
+}
+
+let _compRows = [];
+let _dirRows  = [];
+
+function addComponentRow(data) {
+  const rowId = 'comp_' + Date.now() + Math.random();
+  const matOptions = S.materials.map(m =>
+    `<option value="${m.id}" ${data && data.materialId===m.id?'selected':''}>${esc(m.name)} (${esc(m.unit)})</option>`
+  ).join('');
+  const div = document.createElement('div');
+  div.className = 'comp-card';
+  div.id = rowId;
+  div.innerHTML = `
+    <div class="comp-card-header">
+      <div>
+        <select class="form-select comp-material" style="font-weight:700;border:none;background:none;padding:0;font-size:13px;color:var(--text)">${matOptions || '<option value="">素材を先に登録してください</option>'}</select>
+      </div>
+      <button class="btn-icon-sm" onclick="document.getElementById('${rowId}').remove()">🗑️</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+      <input type="number" class="form-input comp-amount" min="0" step="0.01" value="${data?.amount||''}" placeholder="使用量（例: 10）" style="flex:1">
+      <span class="comp-unit-label text-muted text-sm" style="white-space:nowrap;min-width:24px"></span>
+    </div>
+  `;
+  // show unit label
+  const sel = div.querySelector('.comp-material');
+  const updateUnit = () => {
+    const mat = S.materials.find(m => m.id === sel.value);
+    div.querySelector('.comp-unit-label').textContent = mat ? mat.unit : '';
+  };
+  sel.addEventListener('change', updateUnit);
+  updateUnit();
+  document.getElementById('componentRows').appendChild(div);
+}
+
+function addDirectCostRow(data) {
+  const rowId = 'dc_' + Date.now() + Math.random();
+  const div = document.createElement('div');
+  div.className = 'comp-card';
+  div.id = rowId;
+  div.innerHTML = `
+    <div class="comp-card-header">
+      <div></div>
+      <button class="btn-icon-sm" onclick="document.getElementById('${rowId}').remove()">🗑️</button>
+    </div>
+    <div class="form-row">
+      <div class="form-group mb-0">
+        <input type="text" class="form-input dc-name" placeholder="費用名（例: 袋代）" value="${esc(data?.name||'')}">
+      </div>
+      <div class="form-group mb-0">
+        <input type="number" class="form-input dc-amount" min="0" placeholder="円" value="${data?.amount||''}">
+      </div>
+    </div>
+  `;
+  document.getElementById('directCostRows').appendChild(div);
+}
+
+function editProduct(id) {
+  const p = S.products.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('editProductId').value = p.id;
+  document.getElementById('productModalTitle').textContent = '商品を編集';
+  document.getElementById('prodName').value = p.name;
+  document.getElementById('prodCat').value = p.category || '';
+  document.getElementById('prodTarget').value = p.targetQty || 0;
+  document.getElementById('prodSuggestedPrice').value = p.suggestedPrice || 0;
+  document.getElementById('componentRows').innerHTML = '';
+  document.getElementById('directCostRows').innerHTML = '';
+  document.getElementById('colorRows').innerHTML = '';
+  document.getElementById('outsourceCostRows').innerHTML = '';
+  setProductType(p.type || 'handmade');
+  (p.components||[]).forEach(c => addComponentRow(c));
+  (p.directCosts||[]).forEach(d => addDirectCostRow(d));
+  (p.colors||[]).forEach(c => addColorRow(c));
+  (p.outsourceCosts||[]).forEach(c => addOutsourceCostRow(c));
+  showOverlay('product');
+}
+
+function saveProduct() {
+  const name = document.getElementById('prodName').value.trim();
+  if (!name) return toast('商品名を入力してください');
+  const components = [];
+  document.querySelectorAll('#componentRows .comp-card').forEach(card => {
+    const materialId = card.querySelector('.comp-material')?.value;
+    const amount     = parseFloat(card.querySelector('.comp-amount')?.value) || 0;
+    if (materialId) components.push({ materialId, amount });
+  });
+  const directCosts = [];
+  document.querySelectorAll('#directCostRows .comp-card').forEach(card => {
+    const name2  = card.querySelector('.dc-name')?.value.trim();
+    const amount = parseFloat(card.querySelector('.dc-amount')?.value) || 0;
+    if (name2) directCosts.push({ name: name2, amount });
+  });
+  const colors = [];
+  document.querySelectorAll('#colorRows .comp-card').forEach(card => {
+    const name2      = card.querySelector('.clr-name')?.value.trim();
+    const hex        = card.querySelector('.clr-hex')?.value || '#6366f1';
+    const targetQty  = parseInt(card.querySelector('.clr-target')?.value)   || 0;
+    const producedQty= parseInt(card.querySelector('.clr-produced')?.value) || 0;
+    if (name2) colors.push({ name: name2, hex, targetQty, producedQty });
+  });
+  const outsourceCosts = [];
+  document.querySelectorAll('#outsourceCostRows .outsource-card').forEach(card => {
+    const name2     = card.querySelector('.oc-name')?.value.trim();
+    const unitPrice = parseFloat(card.querySelector('.oc-unit')?.value) || 0;
+    const qty       = parseFloat(card.querySelector('.oc-qty')?.value)  || 1;
+    if (name2) outsourceCosts.push({ name: name2, unitPrice, qty });
+  });
+  const type = document.getElementById('typeOutsource').classList.contains('active') ? 'outsource' : 'handmade';
+  const data = {
+    name, type,
+    category:       document.getElementById('prodCat').value.trim(),
+    targetQty:      parseInt(document.getElementById('prodTarget').value) || 0,
+    suggestedPrice: parseInt(document.getElementById('prodSuggestedPrice').value) || 0,
+    components, directCosts, colors, outsourceCosts
+  };
+  const editId = document.getElementById('editProductId').value;
+  if (editId) {
+    const p = S.products.find(x => x.id === editId);
+    Object.assign(p, data);
+  } else {
+    S.products.push({ id: newId(), producedQty: 0, ...data });
+  }
+  save(); closeOverlay('product'); renderProducts(); toast('商品を保存しました');
+}
+
+function deleteProduct(id) {
+  if (!confirm('この商品を削除しますか？（関連する販売記録は残ります）')) return;
+  S.products = S.products.filter(p => p.id !== id);
+  save(); renderProducts(); toast('削除しました');
+}
+
+// ═══════════════════════════════════════
+// PRICE ADVISOR
+// ═══════════════════════════════════════
+function showPriceAdvisor(productId) {
+  const p = S.products.find(x => x.id === productId);
+  if (!p) return;
+  const a = getPriceAdvice(p);
+  document.getElementById('priceAdvisorTitle').textContent = `💡 ${p.name} の価格アドバイス`;
+  const margin = (price, cost) => cost > 0 ? Math.round((price - cost) / price * 100) : 0;
+
+  const isOutsource = p.type === 'outsource';
+  const outsourceRows = isOutsource
+    ? (p.outsourceCosts||[]).map(c => {
+        const unitP = c.unitPrice != null ? c.unitPrice : (c.totalAmount||0)/Math.max(c.qty||1,1);
+        const total = unitP * (c.qty || 1);
+        return `<div class="cost-row" style="font-size:12px;color:#1d4ed8">
+          <span>　└ ${esc(c.name)}（¥${fmt(unitP)}/個 × ${c.qty||1}個 = ¥${fmt(total)}）</span>
+          <span>¥${fmt(unitP)}</span>
+        </div>`;
+      }).join('')
+    : '';
+
+  document.getElementById('priceAdvisorBody').innerHTML = `
+    <div class="card-title mb-2">原価内訳</div>
+    ${isOutsource
+      ? `<div class="cost-row"><span>外注費合計</span><span class="font-bold" style="color:#1d4ed8">¥${fmt(a.outCost)}</span></div>${outsourceRows}`
+      : `<div class="cost-row"><span>素材費</span><span class="font-bold">¥${fmt(a.matCost)}</span></div>`
+    }
+    <div class="cost-row"><span>直接費（梱包等）</span><span class="font-bold">¥${fmt(a.dirCost)}</span></div>
+    <div class="cost-row"><span>固定費配分</span><span class="font-bold">¥${fmt(a.fixCost)}</span></div>
+    <div class="cost-row total"><span>1個あたり推定原価</span><span>¥${fmt(a.total)}</span></div>
+    <div class="hr"></div>
+    <div class="card-title mb-2">推奨販売価格</div>
+    <div class="price-tier tier-min">
+      <div>
+        <div class="price-tier-label">🟢 最低ライン（+30%）</div>
+        <div class="price-tier-note">原価の1.3倍・利益率 ${margin(a.min, a.total)}%</div>
+      </div>
+      <div class="price-tier-value text-success">¥${fmt(a.min)}</div>
+    </div>
+    <div class="price-tier tier-std">
+      <div>
+        <div class="price-tier-label">⭐ 標準価格（×2.5）</div>
+        <div class="price-tier-note">ハンドメイドの目安・利益率 ${margin(a.std, a.total)}%</div>
+      </div>
+      <div class="price-tier-value text-primary">¥${fmt(a.std)}</div>
+    </div>
+    <div class="price-tier tier-pre">
+      <div>
+        <div class="price-tier-label">💎 プレミアム（×3.5）</div>
+        <div class="price-tier-note">ブランド・デザイン価値込・利益率 ${margin(a.pre, a.total)}%</div>
+      </div>
+      <div class="price-tier-value" style="color:var(--accent)">¥${fmt(a.pre)}</div>
+    </div>
+    <div class="info-box mt-3">
+      💡 <strong>アドバイス：</strong><br>
+      ${a.total === 0
+        ? '素材と固定費を登録すると具体的な価格提案が表示されます。'
+        : `推定原価は <strong>¥${fmt(a.total)}</strong> です。デザフェスのようなイベントでは、<strong>標準価格（¥${fmt(a.std)}）</strong> が多くの作家さんの基準です。作品のクオリティや希少性に自信があれば、プレミアム価格でも十分成立します。固定費（${fmt(totalFixedCostAmount())}円）は全${totalTargetQty()}個に按分しています。`}
+    </div>
+    ${a.total > 0 && p.suggestedPrice ? `
+    <div class="card-title mt-2 mb-2">現在設定中の価格</div>
+    <div class="cost-row">
+      <span>参考販売価格</span>
+      <span class="font-bold">¥${fmt(p.suggestedPrice)}</span>
+    </div>
+    <div class="cost-row">
+      <span>推定利益（1個）</span>
+      <span class="font-bold ${p.suggestedPrice >= a.total ? 'text-success' : 'text-danger'}">
+        ¥${fmt(p.suggestedPrice - a.total)}
+      </span>
+    </div>
+    <div class="cost-row">
+      <span>利益率</span>
+      <span class="font-bold ${p.suggestedPrice >= a.total ? 'text-success' : 'text-danger'}">
+        ${margin(p.suggestedPrice, a.total)}%
+      </span>
+    </div>
+    ` : ''}
+  `;
+  showOverlay('priceAdvisor');
+}
+
+// ═══════════════════════════════════════
+// FIXED COSTS
+// ═══════════════════════════════════════
+const fcCatLabel = {
+  venue:'会場・イベント費', transport:'交通・配送費',
+  labor:'人件費', material:'共通素材費', other:'その他'
+};
+function renderFixedCosts() {
+  const el = document.getElementById('fixedCostList');
+  const total = totalFixedCostAmount();
+  document.getElementById('fixedCostTotal').textContent = '¥' + fmt(total);
+  if (!S.fixedCosts.length) {
+    el.innerHTML = '<div class="empty"><div class="ico">💴</div><p>固定費を追加してください</p></div>';
+    return;
+  }
+  el.innerHTML = S.fixedCosts.map(c => `
+    <div class="list-item">
+      <div>
+        <div class="list-title">${esc(c.name)}</div>
+        <div class="list-sub"><span class="badge badge-gray">${fcCatLabel[c.category]||c.category}</span>${c.note ? ' ' + esc(c.note) : ''}</div>
+      </div>
+      <div class="list-actions items-center" style="align-items:center">
+        <div class="font-bold text-right" style="margin-right:8px">¥${fmt(c.amount)}</div>
+        <button class="btn-icon-sm" onclick="editFixedCost('${c.id}')">✏️</button>
+        <button class="btn-icon-sm" onclick="deleteFixedCost('${c.id}')">🗑️</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function editFixedCost(id) {
+  const c = S.fixedCosts.find(x => x.id === id);
+  if (!c) return;
+  document.getElementById('editFixedCostId').value = c.id;
+  document.getElementById('fixedCostModalTitle').textContent = '固定費を編集';
+  document.getElementById('fcName').value = c.name;
+  document.getElementById('fcAmount').value = c.amount;
+  document.getElementById('fcCategory').value = c.category;
+  document.getElementById('fcNote').value = c.note || '';
+  showOverlay('fixedCost');
+}
+
+function saveFixedCost() {
+  const name = document.getElementById('fcName').value.trim();
+  const amount = parseFloat(document.getElementById('fcAmount').value) || 0;
+  if (!name) return toast('費用名を入力してください');
+  const data = {
+    name, amount,
+    category: document.getElementById('fcCategory').value,
+    note: document.getElementById('fcNote').value.trim()
+  };
+  const editId = document.getElementById('editFixedCostId').value;
+  if (editId) {
+    const c = S.fixedCosts.find(x => x.id === editId);
+    Object.assign(c, data);
+  } else {
+    S.fixedCosts.push({ id: newId(), ...data });
+  }
+  save(); closeOverlay('fixedCost'); renderFixedCosts(); toast('固定費を保存しました');
+}
+
+function deleteFixedCost(id) {
+  if (!confirm('削除しますか？')) return;
+  S.fixedCosts = S.fixedCosts.filter(c => c.id !== id);
+  save(); renderFixedCosts(); toast('削除しました');
+}
+
+// ═══════════════════════════════════════
+// INVENTORY
+// ═══════════════════════════════════════
+function renderInventory() {
+  const el = document.getElementById('inventoryList');
+  if (!S.products.length) {
+    el.innerHTML = '<div class="empty"><div class="ico">📦</div><p>商品を追加してください</p></div>';
+    return;
+  }
+  el.innerHTML = S.products.map(p => {
+    const sold   = soldQty(p.id);
+    const prod   = effectiveProduced(p);
+    const tgt    = effectiveTarget(p);
+    const stock  = Math.max(prod - sold, 0);
+    const pct    = tgt ? Math.min(100, Math.round(prod / tgt * 100)) : 0;
+    const clr    = pct >= 100 ? 'p-success' : pct >= 50 ? 'p-primary' : 'p-warning';
+    const hasColorQty = (p.colors||[]).some(c => (c.targetQty||0) > 0 || (c.producedQty||0) > 0);
+    const colorRows = hasColorQty
+      ? (p.colors||[]).map(c => {
+          const cSold  = soldQtyByColor(p.id, c.name);
+          const cStock = Math.max((c.producedQty||0) - cSold, 0);
+          return `
+          <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px">
+            <span class="color-dot" style="background:${esc(c.hex)};flex-shrink:0"></span>
+            <span style="flex:1;font-weight:600">${esc(c.name)}</span>
+            <span class="text-muted">目標 ${c.targetQty||0}</span>
+            <span style="color:var(--success);font-weight:700">完成 ${c.producedQty||0}</span>
+            <span style="color:var(--warning);font-weight:700">販売 ${cSold}</span>
+            <span style="color:${cStock===0?'var(--danger)':'var(--primary)'};font-weight:700">在庫 ${cStock}</span>
+          </div>`;
+        }).join('')
+      : '';
+    return `<div class="inv-card">
+      <div class="inv-card-header">
+        <div>
+          <div class="font-black" style="font-size:15px">${esc(p.name)}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">
+            ${p.category ? `<span class="badge badge-purple">${esc(p.category)}</span>` : ''}
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="openInvUpdate('${p.id}')">✏️ 更新</button>
+      </div>
+      ${colorRows ? `<div style="margin-bottom:10px;border-top:1px solid var(--border);padding-top:6px">${colorRows}</div>` : ''}
+      <div class="inv-numbers">
+        <div class="inv-num"><div class="inv-num-val text-primary">${tgt}</div><div class="inv-num-label">目標</div></div>
+        <div class="inv-num"><div class="inv-num-val text-success">${prod}</div><div class="inv-num-label">完成</div></div>
+        <div class="inv-num"><div class="inv-num-val text-warning">${sold}</div><div class="inv-num-label">販売済</div></div>
+        <div class="inv-num"><div class="inv-num-val ${stock===0?'text-danger':'text-primary'}">${stock}</div><div class="inv-num-label">在庫</div></div>
+      </div>
+      <div class="progress-bar mt-2"><div class="progress-fill ${clr}" style="width:${pct}%"></div></div>
+      <div class="text-sm text-muted mt-1">制作進捗 ${pct}%</div>
+    </div>`;
+  }).join('');
+}
+
+function openInvUpdate(productId) {
+  const p = S.products.find(x => x.id === productId);
+  if (!p) return;
+  document.getElementById('invUpdateProductId').value = p.id;
+  document.getElementById('invUpdateTitle').textContent = `📦 ${p.name} 制作数を更新`;
+  const hasColors = (p.colors||[]).length > 0;
+  let body = '';
+  if (hasColors) {
+    body = `<div class="info-box" style="font-size:12px;padding:9px 12px;margin-bottom:12px">カラーごとに目標数と完成数を入力してください。合計が自動反映されます。</div>`;
+    body += (p.colors||[]).map((c,i) => `
+      <div class="comp-card" style="margin-bottom:8px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span class="color-dot" style="background:${esc(c.hex)}"></span>
+          <span class="font-bold" style="font-size:13px">${esc(c.name)}</span>
+        </div>
+        <div class="form-row">
+          <div>
+            <label style="font-size:11px;font-weight:700;display:block;margin-bottom:4px">目標数</label>
+            <input type="number" class="form-input inv-clr-target" data-idx="${i}" min="0" value="${c.targetQty||0}">
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;display:block;margin-bottom:4px">完成数</label>
+            <input type="number" class="form-input inv-clr-produced" data-idx="${i}" min="0" value="${c.producedQty||0}">
+          </div>
+        </div>
+      </div>`).join('');
+  } else {
+    body = `
+      <div class="form-group">
+        <label class="form-label">目標制作数</label>
+        <input type="number" id="invTargetQty" class="form-input" min="0" value="${p.targetQty||0}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">制作完了数</label>
+        <input type="number" id="invProducedQty" class="form-input" min="0" value="${p.producedQty||0}">
+      </div>`;
+  }
+  document.getElementById('invUpdateBody').innerHTML = body;
+  showOverlay('invUpdate');
+}
+
+function saveInvUpdate() {
+  const id = document.getElementById('invUpdateProductId').value;
+  const p = S.products.find(x => x.id === id);
+  if (!p) return;
+  const hasColors = (p.colors||[]).length > 0;
+  if (hasColors) {
+    document.querySelectorAll('#invUpdateBody .inv-clr-target').forEach(el => {
+      const i = parseInt(el.dataset.idx);
+      if (p.colors[i]) p.colors[i].targetQty = parseInt(el.value) || 0;
+    });
+    document.querySelectorAll('#invUpdateBody .inv-clr-produced').forEach(el => {
+      const i = parseInt(el.dataset.idx);
+      if (p.colors[i]) p.colors[i].producedQty = parseInt(el.value) || 0;
+    });
+  } else {
+    p.targetQty   = parseInt(document.getElementById('invTargetQty')?.value)   || 0;
+    p.producedQty = parseInt(document.getElementById('invProducedQty')?.value) || 0;
+  }
+  save(); closeOverlay('invUpdate'); renderInventory(); renderDashboard(); toast('在庫を更新しました');
+}
+
+// ═══════════════════════════════════════
+// SALES
+// ═══════════════════════════════════════
+function renderSalesSection() {
+  // date default
+  const saleDate = document.getElementById('saleDate');
+  if (!saleDate.value) saleDate.value = new Date().toISOString().slice(0,10);
+  // product select
+  const sel = document.getElementById('saleProduct');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">-- 商品を選択 --</option>' +
+    S.products.map(p => `<option value="${p.id}" ${p.id===cur?'selected':''}>${esc(p.name)}</option>`).join('');
+  renderTodaySummary();
+}
+
+function onSaleProductChange() {
+  const id = document.getElementById('saleProduct').value;
+  const p  = S.products.find(x => x.id === id);
+  if (p && p.suggestedPrice) {
+    document.getElementById('salePrice').value = p.suggestedPrice;
+  }
+  const colors = (p?.colors || []).filter(c => c.name);
+  const group  = document.getElementById('saleColorGroup');
+  const sel    = document.getElementById('saleColor');
+  if (colors.length) {
+    sel.innerHTML = '<option value="">カラーを選択</option>' +
+      colors.map(c =>
+        `<option value="${esc(c.name)}">${c.name}</option>`
+      ).join('');
+    group.style.display = '';
+  } else {
+    group.style.display = 'none';
+    sel.innerHTML = '';
+  }
+}
+
+function recordSale() {
+  const productId = document.getElementById('saleProduct').value;
+  const date      = document.getElementById('saleDate').value;
+  const qty       = parseInt(document.getElementById('saleQty').value) || 1;
+  const unitPrice = parseInt(document.getElementById('salePrice').value) || 0;
+  const note      = document.getElementById('saleNote').value.trim();
+  if (!productId) return toast('商品を選択してください');
+  if (!date)      return toast('日付を入力してください');
+  const colorName = document.getElementById('saleColor').value || '';
+  S.salesRecords.push({ id: newId(), productId, date, qty, unitPrice, note, colorName });
+  save(); renderTodaySummary(); renderDashboard();
+  document.getElementById('saleQty').value = 1;
+  document.getElementById('saleNote').value = '';
+  document.getElementById('saleColor').value = '';
+  document.getElementById('saleColorGroup').style.display = 'none';
+  toast('販売を記録しました ✅');
+}
+
+function renderTodaySummary() {
+  const today = new Date().toISOString().slice(0,10);
+  const todaySales = S.salesRecords.filter(r => r.date === today);
+  const el = document.getElementById('saleTodaySummary');
+  if (!todaySales.length) { el.innerHTML = ''; return; }
+  const total = todaySales.reduce((s,r) => s + r.qty*r.unitPrice, 0);
+  const qty   = todaySales.reduce((s,r) => s + r.qty, 0);
+  el.innerHTML = `
+    <div class="card-title">📅 本日の販売 (${today})</div>
+    <div class="flex justify-between" style="font-size:15px">
+      <span>販売点数</span><span class="font-bold">${qty} 個</span>
+    </div>
+    <div class="flex justify-between mt-2" style="font-size:18px">
+      <span>売上合計</span><span class="font-black text-success">¥${fmt(total)}</span>
+    </div>
+  `;
+}
+
+function renderSaleHistory() {
+  const el = document.getElementById('saleHistoryList');
+  if (!S.salesRecords.length) {
+    el.innerHTML = '<div class="empty"><div class="ico">📋</div><p>販売記録がありません</p></div>';
+    return;
+  }
+  const sorted = [...S.salesRecords].sort((a,b) => b.date.localeCompare(a.date));
+  el.innerHTML = sorted.map(r => {
+    const p = S.products.find(x => x.id === r.productId);
+    return `<div class="sale-row">
+      <div>
+        <div class="font-bold text-sm">${esc(p?.name||'不明商品')}${r.colorName ? ` <span style="font-size:11px;color:var(--primary);font-weight:400">[${esc(r.colorName)}]</span>` : ''}</div>
+        <div class="text-sm text-muted">${r.date} ・ ${r.qty}個 @¥${fmt(r.unitPrice)}${r.note ? ' ・ '+esc(r.note) : ''}</div>
+      </div>
+      <div class="text-right" style="display:flex;align-items:center;gap:8px">
+        <div class="font-bold">¥${fmt(r.qty*r.unitPrice)}</div>
+        <button class="btn-icon-sm" onclick="deleteSale('${r.id}')">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function deleteSale(id) {
+  if (!confirm('この販売記録を削除しますか？')) return;
+  S.salesRecords = S.salesRecords.filter(r => r.id !== id);
+  save(); renderSaleHistory(); renderDashboard(); toast('削除しました');
+}
+
+// ═══════════════════════════════════════
+// REPORTS / CHARTS
+// ═══════════════════════════════════════
+let charts = {};
+function destroyChart(key) { if (charts[key]) { charts[key].destroy(); delete charts[key]; } }
+
+function renderReports() {
+  renderLineChart();
+  renderPieChart();
+  renderBarChart();
+}
+
+function renderLineChart() {
+  destroyChart('line');
+  const ctx = document.getElementById('chartSalesLine');
+  if (!ctx) return;
+  // Group by date
+  const map = {};
+  S.salesRecords.forEach(r => {
+    map[r.date] = (map[r.date] || 0) + r.qty * r.unitPrice;
+  });
+  const dates = Object.keys(map).sort();
+  if (!dates.length) {
+    ctx.parentElement.innerHTML = '<div class="empty" style="padding:40px"><div class="ico">📈</div><p>販売データがありません</p></div>';
+    return;
+  }
+  charts.line = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: dates.map(d => d.slice(5)),
+      datasets: [{
+        label: '売上（円）', data: dates.map(d => map[d]),
+        borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,.1)',
+        fill: true, tension: .35, pointRadius: 4,
+      }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+  });
+}
+
+function renderPieChart() {
+  destroyChart('pie');
+  const ctx = document.getElementById('chartProductPie');
+  if (!ctx) return;
+  const map = {};
+  S.salesRecords.forEach(r => {
+    map[r.productId] = (map[r.productId] || 0) + r.qty * r.unitPrice;
+  });
+  const ids = Object.keys(map);
+  if (!ids.length) {
+    ctx.parentElement.innerHTML = '<div class="empty" style="padding:30px"><div class="ico">🥧</div><p>販売データがありません</p></div>';
+    return;
+  }
+  const colors = ['#6366f1','#ec4899','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#84cc16'];
+  charts.pie = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ids.map(id => S.products.find(p=>p.id===id)?.name || '不明'),
+      datasets: [{ data: ids.map(id => map[id]), backgroundColor: colors }]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
+  });
+}
+
+function renderBarChart() {
+  destroyChart('bar');
+  const ctx = document.getElementById('chartCostBar');
+  if (!ctx) return;
+  if (!S.products.length) return;
+  const labels = S.products.map(p => p.name);
+  const costs  = S.products.map(p => Math.round(calcTotalCost(p)));
+  const prices = S.products.map(p => p.suggestedPrice || 0);
+  charts.bar = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: '推定原価', data: costs, backgroundColor: 'rgba(239,68,68,.7)' },
+        { label: '参考販売価格', data: prices, backgroundColor: 'rgba(99,102,241,.7)' },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom' } },
+      scales: { y: { beginAtZero: true } }
+    }
+  });
+}
+
+// ═══════════════════════════════════════
+// TODO
+// ═══════════════════════════════════════
+const todoCatLabel = { make:'🎨 商品制作', promo:'📢 集客・告知', venue:'🏟 会場準備', buy:'🛒 購入・発注', other:'📌 その他' };
+const todoCatColor = { make:'badge-purple', promo:'badge-blue', venue:'badge-yellow', buy:'badge-green', other:'badge-gray' };
+
+function renderTodos() {
+  const total     = S.todos.length;
+  const done      = S.todos.filter(t => t.completed).length;
+  const pct       = total ? Math.round(done / total * 100) : 0;
+  const progEl    = document.getElementById('todoProgress');
+  progEl.innerHTML = total
+    ? `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+         <span class="font-bold" style="font-size:14px">進捗 ${done} / ${total} 完了</span>
+         <span class="font-black text-success" style="font-size:16px">${pct}%</span>
+       </div>
+       <div class="todo-progress-bar"><div class="todo-progress-fill" style="width:${pct}%"></div></div>`
+    : '<div class="text-muted text-sm text-center">タスクを追加してイベントを準備しましょう！</div>';
+
+  const el = document.getElementById('todoList');
+  if (!total) { el.innerHTML = '<div class="empty"><div class="ico">✅</div><p>タスクがありません</p></div>'; return; }
+
+  const today = new Date().toISOString().slice(0,10);
+  const sorted = [...S.todos].sort((a,b) => {
+    if (a.completed !== b.completed) return a.completed ? 1 : -1;
+    if (!a.dueDate && !b.dueDate) return 0;
+    if (!a.dueDate) return 1;
+    if (!b.dueDate) return -1;
+    return a.dueDate.localeCompare(b.dueDate);
+  });
+
+  el.innerHTML = sorted.map(t => {
+    let dueBadge = '';
+    if (t.dueDate) {
+      const diff = Math.round((new Date(t.dueDate) - new Date(today)) / 86400000);
+      if (diff < 0)       dueBadge = `<span class="badge badge-overdue">⚠️ ${t.dueDate}（期限切れ）</span>`;
+      else if (diff <= 3) dueBadge = `<span class="badge badge-soon">🔔 ${t.dueDate}（あと${diff}日）</span>`;
+      else                dueBadge = `<span class="badge badge-ok">📅 ${t.dueDate}</span>`;
+    }
+    const catBadge = `<span class="badge ${todoCatColor[t.category]||'badge-gray'}">${todoCatLabel[t.category]||t.category}</span>`;
+    return `<div class="todo-item ${t.completed?'done':''}">
+      <input type="checkbox" class="todo-cb" ${t.completed?'checked':''} onchange="toggleTodo('${t.id}')">
+      <div style="flex:1">
+        <div class="todo-title">${esc(t.title)}</div>
+        <div class="todo-meta">${catBadge}${dueBadge}${t.note?`<span class="text-muted text-sm">${esc(t.note)}</span>`:''}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button class="btn-icon-sm" onclick="editTodo('${t.id}')">✏️</button>
+        <button class="btn-icon-sm" onclick="deleteTodo('${t.id}')">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function saveTodo() {
+  const title = document.getElementById('todoTitle').value.trim();
+  if (!title) return toast('タスク名を入力してください');
+  const data = {
+    title,
+    dueDate:  document.getElementById('todoDue').value,
+    category: document.getElementById('todoCat').value,
+    note:     document.getElementById('todoNote').value.trim(),
+  };
+  const editId = document.getElementById('editTodoId').value;
+  if (editId) {
+    const t = S.todos.find(x => x.id === editId);
+    Object.assign(t, data);
+  } else {
+    S.todos.push({ id: newId(), completed: false, ...data });
+  }
+  save(); closeOverlay('todo'); renderTodos(); toast('タスクを保存しました');
+}
+
+function editTodo(id) {
+  const t = S.todos.find(x => x.id === id);
+  if (!t) return;
+  document.getElementById('editTodoId').value = t.id;
+  document.getElementById('todoModalTitle').textContent = 'タスクを編集';
+  document.getElementById('todoTitle').value = t.title;
+  document.getElementById('todoDue').value   = t.dueDate || '';
+  document.getElementById('todoCat').value   = t.category || 'make';
+  document.getElementById('todoNote').value  = t.note || '';
+  showOverlay('todo');
+}
+
+function toggleTodo(id) {
+  const t = S.todos.find(x => x.id === id);
+  if (t) { t.completed = !t.completed; save(); renderTodos(); }
+}
+
+function deleteTodo(id) {
+  if (!confirm('このタスクを削除しますか？')) return;
+  S.todos = S.todos.filter(t => t.id !== id);
+  save(); renderTodos(); toast('削除しました');
+}
+
+// ═══════════════════════════════════════
+// OVERLAY / MODAL HELPERS
+// ═══════════════════════════════════════
+function showOverlay(name) {
+  document.getElementById('overlay-' + name)?.classList.add('open');
+}
+function closeOverlay(name) {
+  document.getElementById('overlay-' + name)?.classList.remove('open');
+}
+function maybeCloseOverlay(event, name) {
+  if (event.target === document.getElementById('overlay-' + name)) closeOverlay(name);
+}
+
+// ═══════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// ═══════════════════════════════════════
+// EXPORT / IMPORT
+// ═══════════════════════════════════════
+function exportData() {
+  const json = JSON.stringify(S, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `dezafes-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('⬇️ エクスポートしました');
+}
+
+function importData() {
+  const input    = document.createElement('input');
+  input.type     = 'file';
+  input.accept   = '.json';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (!Array.isArray(data.materials) || !Array.isArray(data.products)) {
+          return toast('❌ このファイルは対応していません');
+        }
+        if (!confirm(`データをインポートします。\n現在のデータは上書きされます。よろしいですか？`)) return;
+        Object.assign(S, data);
+        S.materials    = S.materials    || [];
+        S.products     = S.products     || [];
+        S.fixedCosts   = S.fixedCosts   || [];
+        S.salesRecords = S.salesRecords || [];
+        S.todos        = S.todos        || [];
+        save();
+        nav('home');
+        toast('✅ インポートしました');
+      } catch {
+        toast('❌ ファイルの読み込みに失敗しました');
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+// ═══════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════
+function fmt(n) {
+  return Math.round(n).toLocaleString('ja-JP');
+}
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ═══════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════
+load();
+nav('home');
+
+// Pre-fill today's date in sale form
+document.getElementById('saleDate').value = new Date().toISOString().slice(0,10);
+</script>
+</body>
+</html>
