@@ -273,6 +273,30 @@ body {
   font-size: 13px; font-weight: 700; color: var(--muted); transition: all .15s;
 }
 .type-btn.active { background: var(--primary); color: white; }
+/* ── Sort bar ── */
+.sort-bar { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+.sort-bar label { font-size:12px; color:var(--muted); flex-shrink:0; }
+/* ── Price advisor collapsible ── */
+.price-details summary {
+  list-style:none; -webkit-appearance:none; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; gap:6px;
+  padding:7px 12px; border-radius:8px; border:1px solid var(--primary);
+  color:var(--primary); font-size:13px; font-weight:600; width:100%;
+  background:transparent;
+}
+.price-details summary::-webkit-details-marker { display:none; }
+.price-details[open] summary { background:var(--primary-light); }
+/* ── Drag over highlight ── */
+.drag-over { outline:2px dashed var(--primary); outline-offset:2px; }
+/* ── Set component card ── */
+.set-comp-card { border:1.5px solid #fde68a; border-radius:10px; padding:10px 12px; margin-bottom:8px; background:#fffbeb; }
+/* ── Individual item management ── */
+.item-row { display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid var(--border); }
+.item-row:last-child { border-bottom:none; }
+.item-row.item-sold { opacity:.55; }
+.item-row.item-sold .item-name { text-decoration:line-through; }
+.item-add-form { background:var(--bg); border-radius:10px; padding:10px 12px; margin-top:8px; }
+.badge-indiv { background:#e0f2fe; color:#0369a1; font-size:10px; padding:2px 6px; border-radius:4px; font-weight:700; }
 /* ── Outsource cost card ── */
 .outsource-card {
   border: 1.5px solid #bfdbfe; border-radius: 10px;
@@ -427,9 +451,17 @@ body {
   </div>
   <!-- 商品一覧 -->
   <div id="prod-list">
-    <div class="sec-header" style="margin-bottom:12px">
+    <div class="sec-header" style="margin-bottom:8px">
       <div class="sec-title" style="font-size:16px">商品一覧</div>
       <button class="btn btn-primary btn-sm" onclick="openModal('product')">＋ 追加</button>
+    </div>
+    <div class="sort-bar">
+      <label>並べ替え:</label>
+      <select id="productSortSelect" class="form-select" style="height:32px;font-size:12px;flex:1" onchange="changeProductSort(this.value)">
+        <option value="custom">カスタム順（↑↓ボタンで並替）</option>
+        <option value="name">名前順</option>
+        <option value="category">カテゴリ順</option>
+      </select>
     </div>
     <div id="productList"></div>
   </div>
@@ -470,7 +502,7 @@ body {
         </select>
       </div>
       <div class="form-group" id="saleColorGroup" style="display:none">
-        <label class="form-label">カラー</label>
+        <label class="form-label" id="saleColorLabel">カラー</label>
         <select id="saleColor" class="form-select"></select>
       </div>
       <div class="form-row">
@@ -552,7 +584,10 @@ body {
 <div class="overlay" id="overlay-product" onclick="maybeCloseOverlay(event,'product')">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div class="modal-header"><div class="modal-title" id="productModalTitle">商品を追加</div></div>
+    <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center">
+      <div class="modal-title" id="productModalTitle">商品を追加</div>
+      <button onclick="closeOverlay('product')" style="background:none;border:none;font-size:22px;color:var(--muted);cursor:pointer;padding:0 4px;line-height:1;flex-shrink:0">✕</button>
+    </div>
     <div class="modal-body">
       <input type="hidden" id="editProductId">
       <div class="form-group">
@@ -560,6 +595,7 @@ body {
         <div class="type-toggle">
           <button type="button" class="type-btn active" id="typeHandmade" onclick="setProductType('handmade')">🧰 ハンドメイド</button>
           <button type="button" class="type-btn" id="typeOutsource" onclick="setProductType('outsource')">🏭 外注</button>
+          <button type="button" class="type-btn" id="typeSet" onclick="setProductType('set')">🔗 セット</button>
         </div>
       </div>
       <div class="form-row">
@@ -589,6 +625,34 @@ body {
         <button class="btn btn-ghost btn-sm" onclick="addColorRow()">＋ カラーを追加</button>
       </div>
       <div id="colorRows"></div>
+
+      <!-- 個体管理モード（ハンドメイドのみ） -->
+      <div id="individualModeSection">
+        <div class="hr"></div>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:2px 0">
+          <input type="checkbox" id="individualMode" style="width:18px;height:18px;accent-color:var(--primary);flex-shrink:0">
+          <div>
+            <div class="font-bold" style="font-size:13px">🏷️ 個体管理モード</div>
+            <div class="text-muted" style="font-size:11px">作品1点ずつに名前・番号をつけて管理（植木鉢など一点物向け）</div>
+          </div>
+        </label>
+        <div class="info-box" style="font-size:11px;padding:8px 10px;margin-top:8px">
+          💡 作品の追加・在庫ステータスは「在庫・制作」タブから行えます
+        </div>
+      </div>
+
+      <!-- セット構成セクション（セットタイプのみ表示） -->
+      <div id="setComponentsSection" style="display:none">
+        <div class="hr"></div>
+        <div class="flex justify-between items-center mb-2">
+          <div class="font-bold" style="font-size:14px">🔗 セット構成</div>
+          <button class="btn btn-ghost btn-sm" onclick="addSetComponentRow()">＋ 商品を追加</button>
+        </div>
+        <div class="info-box" style="font-size:12px;padding:9px 12px;margin-bottom:8px">
+          セットに含める商品と数量を指定。セット販売時に各商品の在庫から自動で引かれます。原価はセット内商品の合計で自動計算します。
+        </div>
+        <div id="setComponentRows"></div>
+      </div>
 
       <!-- 外注費セクション（外注タイプのみ表示） -->
       <div id="outsourceCostSection" style="display:none">
@@ -840,18 +904,33 @@ function soldQty(productId) {
 function soldQtyByColor(productId, colorName) {
   return S.salesRecords.filter(r => r.productId === productId && r.colorName === colorName).reduce((s,r) => s + r.qty, 0);
 }
+// セット販売で消費された数（単品側からの差し引き）
+function setDeducted(productId) {
+  return S.products
+    .filter(p => p.type === 'set')
+    .reduce((total, setP) => {
+      const comp = (setP.setComponents || []).find(c => c.productId === productId);
+      if (!comp) return total;
+      return total + soldQty(setP.id) * (comp.qty || 1);
+    }, 0);
+}
 function effectiveProduced(product) {
+  if (product.individualMode) return (product.items || []).length;
   const cols = (product.colors || []).filter(c => (c.producedQty || 0) > 0 || (c.targetQty || 0) > 0);
   if (cols.length) return cols.reduce((s, c) => s + (c.producedQty || 0), 0);
   return product.producedQty || 0;
 }
 function effectiveTarget(product) {
+  if (product.individualMode) return product.targetQty || (product.items || []).length;
   const cols = (product.colors || []).filter(c => (c.targetQty || 0) > 0);
   if (cols.length) return cols.reduce((s, c) => s + (c.targetQty || 0), 0);
   return product.targetQty || 0;
 }
 function stockQty(product) {
-  return effectiveProduced(product) - soldQty(product.id);
+  if (product.individualMode) {
+    return (product.items || []).filter(i => i.status !== 'sold').length;
+  }
+  return effectiveProduced(product) - soldQty(product.id) - setDeducted(product.id);
 }
 function calcMaterialCost(product) {
   if (product.type === 'outsource') return 0;
@@ -886,17 +965,32 @@ function fixedCostPerUnit(product) {
   const share = myTarget / totalQty;
   return (total * share) / Math.max(myTarget, 1);
 }
+function calcSetCost(product) {
+  return (product.setComponents || []).reduce((sum, c) => {
+    const p = S.products.find(x => x.id === c.productId);
+    if (!p) return sum;
+    return sum + calcTotalCost(p) * (c.qty || 1);
+  }, 0);
+}
 function calcTotalCost(product) {
+  if (product.type === 'set') return calcSetCost(product);
   return calcMaterialCost(product) + calcOutsourceCost(product) + calcDirectCost(product) + fixedCostPerUnit(product);
 }
 
 function getPriceAdvice(product) {
+  const round100 = v => Math.ceil(v / 100) * 100;
+  if (product.type === 'set') {
+    const setCost = calcSetCost(product);
+    const fixCost = fixedCostPerUnit(product);
+    const total   = setCost + fixCost;
+    return { matCost:0, outCost:0, dirCost:setCost, fixCost, total,
+      min: round100(total * 1.3), std: round100(total * 2.5), pre: round100(total * 3.5) };
+  }
   const matCost = calcMaterialCost(product);
   const outCost = calcOutsourceCost(product);
   const dirCost = calcDirectCost(product);
   const fixCost = fixedCostPerUnit(product);
   const total   = matCost + outCost + dirCost + fixCost;
-  const round100 = v => Math.ceil(v / 100) * 100;
   return {
     matCost, outCost, dirCost, fixCost, total,
     min: round100(total * 1.3),
@@ -1019,6 +1113,8 @@ function openModal(type, extra) {
     document.getElementById('directCostRows').innerHTML = '';
     document.getElementById('colorRows').innerHTML = '';
     document.getElementById('outsourceCostRows').innerHTML = '';
+    document.getElementById('setComponentRows').innerHTML = '';
+    document.getElementById('individualMode').checked = false;
     setProductType('handmade');
   }
   if (type === 'fixedCost') {
@@ -1105,50 +1201,118 @@ function deleteMaterial(id) {
 // ═══════════════════════════════════════
 // PRODUCTS
 // ═══════════════════════════════════════
+let productSortMode = 'custom';
+
+function changeProductSort(mode) {
+  productSortMode = mode;
+  renderProducts();
+}
+
+function moveProduct(productId, direction) {
+  const idx = S.products.findIndex(p => p.id === productId);
+  const newIdx = idx + direction;
+  if (newIdx < 0 || newIdx >= S.products.length) return;
+  const [item] = S.products.splice(idx, 1);
+  S.products.splice(newIdx, 0, item);
+  save(); renderProducts();
+}
+
+let _dragSrcId = null;
+function onDragStart(e, id) { _dragSrcId = id; e.dataTransfer.effectAllowed = 'move'; }
+function onDragOver(e, id) {
+  e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+  document.querySelectorAll('#productList .card').forEach(c => c.classList.remove('drag-over'));
+  const el = document.getElementById('pcard_' + id);
+  if (el) el.classList.add('drag-over');
+}
+function onDrop(e, id) {
+  e.preventDefault();
+  document.querySelectorAll('#productList .card').forEach(c => c.classList.remove('drag-over'));
+  if (_dragSrcId === id) return;
+  const srcIdx = S.products.findIndex(p => p.id === _dragSrcId);
+  const dstIdx = S.products.findIndex(p => p.id === id);
+  if (srcIdx < 0 || dstIdx < 0) return;
+  const [item] = S.products.splice(srcIdx, 1);
+  S.products.splice(dstIdx, 0, item);
+  save(); renderProducts();
+}
+
 function renderProducts() {
   const el = document.getElementById('productList');
   if (!S.products.length) {
     el.innerHTML = '<div class="empty"><div class="ico">🏷️</div><p>商品を追加してください</p></div>';
     return;
   }
-  el.innerHTML = S.products.map(p => {
-    const cost = calcTotalCost(p);
+  // sync sort select
+  const sel = document.getElementById('productSortSelect');
+  if (sel) sel.value = productSortMode;
+
+  let prods = [...S.products];
+  if (productSortMode === 'name')     prods.sort((a,b) => a.name.localeCompare(b.name, 'ja'));
+  else if (productSortMode === 'category') prods.sort((a,b) => (a.category||'').localeCompare(b.category||'', 'ja'));
+
+  const canReorder = productSortMode === 'custom';
+
+  el.innerHTML = prods.map(p => {
+    const cost  = calcTotalCost(p);
     const stock = stockQty(p);
     const typeBadge = p.type === 'outsource'
       ? '<span class="badge" style="background:#dbeafe;color:#1d4ed8">🏭 外注</span>'
+      : p.type === 'set'
+      ? '<span class="badge" style="background:#fef3c7;color:#92400e">🔗 セット</span>'
       : '<span class="badge" style="background:#dcfce7;color:#166534">🧰 ハンドメイド</span>';
     const cats = p.category ? `<span class="badge badge-purple">${esc(p.category)}</span>` : '';
-    const colorDots = (p.colors||[]).map(c =>
-      `<span class="color-chip"><span class="color-dot" style="background:${esc(c.hex)}"></span>${esc(c.name)}</span>`
-    ).join('');
-    return `<div class="card mb-2">
+
+    // セット構成の表示
+    const setInfo = p.type === 'set' && (p.setComponents||[]).length
+      ? `<div style="font-size:12px;color:var(--muted);margin-top:3px">${
+          (p.setComponents||[]).map(c => {
+            const cp = S.products.find(x => x.id === c.productId);
+            return cp ? `${esc(cp.name)}×${c.qty||1}` : '';
+          }).filter(Boolean).join(' ＋ ')}</div>`
+      : '';
+
+    const reorderBtns = canReorder ? `
+      <button class="btn-icon-sm" onclick="moveProduct('${p.id}',-1)" title="上へ">↑</button>
+      <button class="btn-icon-sm" onclick="moveProduct('${p.id}',1)" title="下へ">↓</button>` : '';
+
+    return `<div class="card mb-2" id="pcard_${p.id}"
+      draggable="${canReorder}"
+      ondragstart="onDragStart(event,'${p.id}')"
+      ondragover="onDragOver(event,'${p.id}')"
+      ondrop="onDrop(event,'${p.id}')">
       <div class="flex justify-between items-center mb-2">
-        <div>
+        <div style="flex:1;min-width:0">
           <div class="font-black" style="font-size:16px">${esc(p.name)}</div>
           <div class="mt-1 flex gap-1" style="flex-wrap:wrap">${typeBadge} ${cats} ${badgeStock(Math.max(stock,0))}</div>
-          ${colorDots ? `<div class="color-dots-row">${colorDots}</div>` : ''}
+          ${setInfo}
         </div>
         <div class="list-actions">
+          ${reorderBtns}
           <button class="btn-icon-sm" onclick="editProduct('${p.id}')">✏️</button>
           <button class="btn-icon-sm" onclick="deleteProduct('${p.id}')">🗑️</button>
         </div>
       </div>
-      <div class="hr" style="margin:8px 0"></div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">
-        <div class="text-center">
-          <div style="font-size:11px;color:var(--muted)">推定原価</div>
-          <div class="font-bold text-danger">¥${fmt(cost)}</div>
+      <details class="price-details">
+        <summary>💡 原価・価格アドバイス ▾</summary>
+        <div style="margin-top:10px">
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">
+            <div class="text-center">
+              <div style="font-size:11px;color:var(--muted)">推定原価</div>
+              <div class="font-bold text-danger">¥${fmt(cost)}</div>
+            </div>
+            <div class="text-center">
+              <div style="font-size:11px;color:var(--muted)">参考販売価格</div>
+              <div class="font-bold text-success">¥${fmt(p.suggestedPrice||0)}</div>
+            </div>
+            <div class="text-center">
+              <div style="font-size:11px;color:var(--muted)">利益率</div>
+              <div class="font-bold ${(p.suggestedPrice||0) > cost ? 'text-success' : 'text-danger'}">${p.suggestedPrice && cost ? Math.round((p.suggestedPrice-cost)/p.suggestedPrice*100) : 0}%</div>
+            </div>
+          </div>
+          <button class="btn btn-ghost btn-sm w-full" style="border-color:var(--primary);color:var(--primary)" onclick="showPriceAdvisor('${p.id}')">💡 詳細な価格アドバイスを見る</button>
         </div>
-        <div class="text-center">
-          <div style="font-size:11px;color:var(--muted)">参考販売価格</div>
-          <div class="font-bold text-success">¥${fmt(p.suggestedPrice||0)}</div>
-        </div>
-        <div class="text-center">
-          <div style="font-size:11px;color:var(--muted)">利益率</div>
-          <div class="font-bold ${(p.suggestedPrice||0) > cost ? 'text-success' : 'text-danger'}">${p.suggestedPrice && cost ? Math.round((p.suggestedPrice-cost)/p.suggestedPrice*100) : 0}%</div>
-        </div>
-      </div>
-      <button class="btn btn-ghost btn-sm w-full" style="border-color:var(--primary);color:var(--primary)" onclick="showPriceAdvisor('${p.id}')">💡 AI価格アドバイスを見る</button>
+      </details>
     </div>`;
   }).join('');
 }
@@ -1156,9 +1320,40 @@ function renderProducts() {
 function setProductType(type) {
   document.getElementById('typeHandmade').classList.toggle('active', type === 'handmade');
   document.getElementById('typeOutsource').classList.toggle('active', type === 'outsource');
-  document.getElementById('outsourceCostSection').style.display = type === 'outsource' ? '' : 'none';
-  document.getElementById('materialCostSection').style.display  = type === 'outsource' ? 'none' : '';
-  document.getElementById('componentRows').style.display        = type === 'outsource' ? 'none' : '';
+  document.getElementById('typeSet').classList.toggle('active', type === 'set');
+  document.getElementById('outsourceCostSection').style.display  = type === 'outsource' ? '' : 'none';
+  document.getElementById('setComponentsSection').style.display  = type === 'set'       ? '' : 'none';
+  document.getElementById('materialCostSection').style.display   = (type === 'outsource' || type === 'set') ? 'none' : '';
+  document.getElementById('componentRows').style.display         = (type === 'outsource' || type === 'set') ? 'none' : '';
+  // 個体管理モードはハンドメイドのみ
+  const indivSec = document.getElementById('individualModeSection');
+  if (indivSec) indivSec.style.display = type === 'handmade' ? '' : 'none';
+  if (type !== 'handmade') document.getElementById('individualMode').checked = false;
+}
+
+function addSetComponentRow(data) {
+  const rowId = 'sc_' + Date.now() + Math.random().toString(36).slice(2);
+  const prodOptions = S.products
+    .filter(p => p.type !== 'set')
+    .map(p => `<option value="${p.id}" ${data?.productId === p.id ? 'selected' : ''}>${esc(p.name)}</option>`)
+    .join('');
+  const div = document.createElement('div');
+  div.className = 'set-comp-card';
+  div.id = rowId;
+  div.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <select class="form-select sc-product" style="flex:1;font-weight:700;font-size:13px">
+        <option value="">商品を選択</option>${prodOptions}
+      </select>
+      <button class="btn-icon-sm" onclick="document.getElementById('${rowId}').remove()">🗑️</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <label style="font-size:12px;color:var(--muted);flex-shrink:0">数量</label>
+      <input type="number" class="form-input sc-qty" min="1" value="${data?.qty || 1}" style="width:80px">
+      <span class="text-muted text-sm">個</span>
+    </div>
+  `;
+  document.getElementById('setComponentRows').appendChild(div);
 }
 
 function addOutsourceCostRow(data) {
@@ -1200,6 +1395,44 @@ function refreshOcPreview(rowId) {
     ? `→ 発注合計 ¥${fmt(unit * qty)}（¥${unit} × ${qty}個）`
     : '';
 }
+
+// ─── Individual item management ───────────────────────────
+function toggleAddItemForm(productId) {
+  const el = document.getElementById('addItemForm_' + productId);
+  if (!el) return;
+  el.style.display = el.style.display === 'none' ? '' : 'none';
+  if (el.style.display !== 'none') document.getElementById('newItemName_' + productId)?.focus();
+}
+
+function addItem(productId) {
+  const nameEl = document.getElementById('newItemName_' + productId);
+  const noteEl = document.getElementById('newItemNote_' + productId);
+  const name   = nameEl?.value.trim();
+  if (!name) return toast('作品名・番号を入力してください');
+  const p = S.products.find(x => x.id === productId);
+  if (!p) return;
+  p.items = p.items || [];
+  p.items.push({ id: newId(), name, note: noteEl?.value.trim() || '', status: 'available' });
+  save(); renderInventory(); toast('作品を追加しました');
+}
+
+function toggleItemStatus(productId, itemId) {
+  const p = S.products.find(x => x.id === productId);
+  if (!p) return;
+  const item = (p.items || []).find(i => i.id === itemId);
+  if (!item) return;
+  item.status = item.status === 'sold' ? 'available' : 'sold';
+  save(); renderInventory(); renderDashboard(); toast(item.status === 'sold' ? '販売済にしました' : '在庫に戻しました');
+}
+
+function deleteItem(productId, itemId) {
+  if (!confirm('この作品を削除しますか？')) return;
+  const p = S.products.find(x => x.id === productId);
+  if (!p) return;
+  p.items = (p.items || []).filter(i => i.id !== itemId);
+  save(); renderInventory(); toast('削除しました');
+}
+// ─────────────────────────────────────────────────────────
 
 function addColorRow(data) {
   const rowId = 'clr_' + Date.now() + Math.random();
@@ -1297,11 +1530,14 @@ function editProduct(id) {
   document.getElementById('directCostRows').innerHTML = '';
   document.getElementById('colorRows').innerHTML = '';
   document.getElementById('outsourceCostRows').innerHTML = '';
+  document.getElementById('setComponentRows').innerHTML = '';
+  document.getElementById('individualMode').checked = !!p.individualMode;
   setProductType(p.type || 'handmade');
   (p.components||[]).forEach(c => addComponentRow(c));
   (p.directCosts||[]).forEach(d => addDirectCostRow(d));
   (p.colors||[]).forEach(c => addColorRow(c));
   (p.outsourceCosts||[]).forEach(c => addOutsourceCostRow(c));
+  (p.setComponents||[]).forEach(c => addSetComponentRow(c));
   showOverlay('product');
 }
 
@@ -1335,20 +1571,31 @@ function saveProduct() {
     const qty       = parseFloat(card.querySelector('.oc-qty')?.value)  || 1;
     if (name2) outsourceCosts.push({ name: name2, unitPrice, qty });
   });
-  const type = document.getElementById('typeOutsource').classList.contains('active') ? 'outsource' : 'handmade';
+  const setComponents = [];
+  document.querySelectorAll('#setComponentRows .set-comp-card').forEach(card => {
+    const productId = card.querySelector('.sc-product')?.value;
+    const qty       = parseInt(card.querySelector('.sc-qty')?.value) || 1;
+    if (productId) setComponents.push({ productId, qty });
+  });
+  const type = document.getElementById('typeSet').classList.contains('active') ? 'set'
+             : document.getElementById('typeOutsource').classList.contains('active') ? 'outsource'
+             : 'handmade';
+  const individualMode = type === 'handmade' && document.getElementById('individualMode').checked;
   const data = {
-    name, type,
+    name, type, individualMode,
     category:       document.getElementById('prodCat').value.trim(),
     targetQty:      parseInt(document.getElementById('prodTarget').value) || 0,
     suggestedPrice: parseInt(document.getElementById('prodSuggestedPrice').value) || 0,
-    components, directCosts, colors, outsourceCosts
+    components, directCosts, colors, outsourceCosts, setComponents
   };
   const editId = document.getElementById('editProductId').value;
   if (editId) {
     const p = S.products.find(x => x.id === editId);
+    const existingItems = p.items; // 個体リストを保持
     Object.assign(p, data);
+    p.items = existingItems || [];
   } else {
-    S.products.push({ id: newId(), producedQty: 0, ...data });
+    S.products.push({ id: newId(), producedQty: 0, items: [], ...data });
   }
   save(); closeOverlay('product'); renderProducts(); toast('商品を保存しました');
 }
@@ -1369,6 +1616,18 @@ function showPriceAdvisor(productId) {
   document.getElementById('priceAdvisorTitle').textContent = `💡 ${p.name} の価格アドバイス`;
   const margin = (price, cost) => cost > 0 ? Math.round((price - cost) / price * 100) : 0;
 
+  const isSet = p.type === 'set';
+  const setRows = isSet
+    ? (p.setComponents||[]).map(c => {
+        const cp = S.products.find(x => x.id === c.productId);
+        if (!cp) return '';
+        const cCost = calcTotalCost(cp) * (c.qty || 1);
+        return `<div class="cost-row" style="font-size:12px;color:#92400e">
+          <span>　└ ${esc(cp.name)} × ${c.qty||1}個</span>
+          <span>¥${fmt(cCost)}</span>
+        </div>`;
+      }).join('')
+    : '';
   const isOutsource = p.type === 'outsource';
   const outsourceRows = isOutsource
     ? (p.outsourceCosts||[]).map(c => {
@@ -1383,11 +1642,13 @@ function showPriceAdvisor(productId) {
 
   document.getElementById('priceAdvisorBody').innerHTML = `
     <div class="card-title mb-2">原価内訳</div>
-    ${isOutsource
+    ${isSet
+      ? `<div class="cost-row"><span>セット原価合計</span><span class="font-bold" style="color:#92400e">¥${fmt(a.total - a.fixCost)}</span></div>${setRows}`
+      : isOutsource
       ? `<div class="cost-row"><span>外注費合計</span><span class="font-bold" style="color:#1d4ed8">¥${fmt(a.outCost)}</span></div>${outsourceRows}`
       : `<div class="cost-row"><span>素材費</span><span class="font-bold">¥${fmt(a.matCost)}</span></div>`
     }
-    <div class="cost-row"><span>直接費（梱包等）</span><span class="font-bold">¥${fmt(a.dirCost)}</span></div>
+    ${!isSet ? `<div class="cost-row"><span>直接費（梱包等）</span><span class="font-bold">¥${fmt(a.dirCost)}</span></div>` : ''}
     <div class="cost-row"><span>固定費配分</span><span class="font-bold">¥${fmt(a.fixCost)}</span></div>
     <div class="cost-row total"><span>1個あたり推定原価</span><span>¥${fmt(a.total)}</span></div>
     <div class="hr"></div>
@@ -1519,12 +1780,58 @@ function renderInventory() {
     return;
   }
   el.innerHTML = S.products.map(p => {
-    const sold   = soldQty(p.id);
-    const prod   = effectiveProduced(p);
-    const tgt    = effectiveTarget(p);
-    const stock  = Math.max(prod - sold, 0);
-    const pct    = tgt ? Math.min(100, Math.round(prod / tgt * 100)) : 0;
-    const clr    = pct >= 100 ? 'p-success' : pct >= 50 ? 'p-primary' : 'p-warning';
+    const prod  = effectiveProduced(p);
+    const tgt   = effectiveTarget(p);
+    const stock = Math.max(stockQty(p), 0);
+    const pct   = tgt ? Math.min(100, Math.round(prod / tgt * 100)) : 0;
+    const clr   = pct >= 100 ? 'p-success' : pct >= 50 ? 'p-primary' : 'p-warning';
+
+    // ── 個体管理モード ──
+    if (p.individualMode) {
+      const items     = p.items || [];
+      const available = items.filter(i => i.status !== 'sold').length;
+      const soldCount = items.filter(i => i.status === 'sold').length;
+      const itemRows  = items.map(item => `
+        <div class="item-row ${item.status === 'sold' ? 'item-sold' : ''}">
+          <div style="flex:1;min-width:0">
+            <div class="item-name" style="font-size:13px;font-weight:600">${esc(item.name)}</div>
+            ${item.note ? `<div style="font-size:11px;color:var(--muted)">${esc(item.note)}</div>` : ''}
+          </div>
+          <span class="badge ${item.status === 'sold' ? 'badge-red' : 'badge-green'}" style="flex-shrink:0">
+            ${item.status === 'sold' ? '販売済' : '在庫'}
+          </span>
+          <button class="btn-icon-sm" onclick="toggleItemStatus('${p.id}','${item.id}')" title="ステータス切替">↔</button>
+          <button class="btn-icon-sm" onclick="deleteItem('${p.id}','${item.id}')">🗑️</button>
+        </div>`).join('');
+      return `<div class="inv-card">
+        <div class="inv-card-header">
+          <div>
+            <div class="font-black" style="font-size:15px">${esc(p.name)}</div>
+            <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">
+              ${p.category ? `<span class="badge badge-purple">${esc(p.category)}</span>` : ''}
+              <span class="badge-indiv">🏷️ 個体管理</span>
+            </div>
+          </div>
+        </div>
+        <div class="inv-numbers" style="margin:10px 0 8px">
+          <div class="inv-num"><div class="inv-num-val text-primary">${items.length}</div><div class="inv-num-label">登録数</div></div>
+          <div class="inv-num"><div class="inv-num-val text-success">${available}</div><div class="inv-num-label">在庫</div></div>
+          <div class="inv-num"><div class="inv-num-val text-warning">${soldCount}</div><div class="inv-num-label">販売済</div></div>
+        </div>
+        ${items.length ? `<div style="border-top:1px solid var(--border);padding-top:6px">${itemRows}</div>` : '<div class="text-muted text-sm" style="padding:8px 0">まだ作品が登録されていません</div>'}
+        <div id="addItemForm_${p.id}" style="display:none" class="item-add-form mt-2">
+          <div class="form-row" style="margin-bottom:6px">
+            <input type="text" id="newItemName_${p.id}" class="form-input" placeholder="作品名・番号（例: 植木鉢#01）">
+            <input type="text" id="newItemNote_${p.id}" class="form-input" placeholder="メモ（任意）">
+          </div>
+          <button class="btn btn-primary btn-sm w-full" onclick="addItem('${p.id}')">追加</button>
+        </div>
+        <button class="btn btn-ghost btn-sm w-full mt-2" onclick="toggleAddItemForm('${p.id}')">＋ 作品を追加</button>
+      </div>`;
+    }
+
+    // ── 通常モード（カラー or 数量） ──
+    const sold   = soldQty(p.id) + setDeducted(p.id);
     const hasColorQty = (p.colors||[]).some(c => (c.targetQty||0) > 0 || (c.producedQty||0) > 0);
     const colorRows = hasColorQty
       ? (p.colors||[]).map(c => {
@@ -1637,28 +1944,40 @@ function renderSalesSection() {
   const sel = document.getElementById('saleProduct');
   const cur = sel.value;
   sel.innerHTML = '<option value="">-- 商品を選択 --</option>' +
-    S.products.map(p => `<option value="${p.id}" ${p.id===cur?'selected':''}>${esc(p.name)}</option>`).join('');
+    S.products.map(p => {
+      const prefix = p.type === 'set' ? '🔗 ' : p.type === 'outsource' ? '🏭 ' : '';
+      return `<option value="${p.id}" ${p.id===cur?'selected':''}>${prefix}${esc(p.name)}</option>`;
+    }).join('');
   renderTodaySummary();
 }
 
 function onSaleProductChange() {
-  const id = document.getElementById('saleProduct').value;
-  const p  = S.products.find(x => x.id === id);
-  if (p && p.suggestedPrice) {
-    document.getElementById('salePrice').value = p.suggestedPrice;
-  }
-  const colors = (p?.colors || []).filter(c => c.name);
-  const group  = document.getElementById('saleColorGroup');
-  const sel    = document.getElementById('saleColor');
-  if (colors.length) {
-    sel.innerHTML = '<option value="">カラーを選択</option>' +
-      colors.map(c =>
-        `<option value="${esc(c.name)}">${c.name}</option>`
-      ).join('');
+  const id    = document.getElementById('saleProduct').value;
+  const p     = S.products.find(x => x.id === id);
+  const group = document.getElementById('saleColorGroup');
+  const sel   = document.getElementById('saleColor');
+  const label = document.getElementById('saleColorLabel');
+  if (p?.suggestedPrice) document.getElementById('salePrice').value = p.suggestedPrice;
+
+  if (p?.individualMode) {
+    // 個体管理モード：在庫の作品一覧を表示
+    const available = (p.items || []).filter(i => i.status !== 'sold');
+    label.textContent = '作品を選択';
+    sel.innerHTML = '<option value="">-- 作品を選択（任意）--</option>' +
+      available.map(i => `<option value="${esc(i.id)}">${esc(i.name)}${i.note ? ' (' + esc(i.note) + ')' : ''}</option>`).join('');
     group.style.display = '';
+    document.getElementById('saleQty').value = 1;
   } else {
-    group.style.display = 'none';
-    sel.innerHTML = '';
+    const colors = (p?.colors || []).filter(c => c.name);
+    label.textContent = 'カラー';
+    if (colors.length) {
+      sel.innerHTML = '<option value="">カラーを選択</option>' +
+        colors.map(c => `<option value="${esc(c.name)}">${c.name}</option>`).join('');
+      group.style.display = '';
+    } else {
+      group.style.display = 'none';
+      sel.innerHTML = '';
+    }
   }
 }
 
@@ -1670,8 +1989,17 @@ function recordSale() {
   const note      = document.getElementById('saleNote').value.trim();
   if (!productId) return toast('商品を選択してください');
   if (!date)      return toast('日付を入力してください');
-  const colorName = document.getElementById('saleColor').value || '';
-  S.salesRecords.push({ id: newId(), productId, date, qty, unitPrice, note, colorName });
+  const p           = S.products.find(x => x.id === productId);
+  const selVal      = document.getElementById('saleColor').value || '';
+  let colorName = '', itemId = '', itemName = '';
+  if (p?.individualMode && selVal) {
+    // 個体管理モード：選択した作品を販売済に更新
+    const item = (p.items || []).find(i => i.id === selVal);
+    if (item) { item.status = 'sold'; itemId = item.id; itemName = item.name; }
+  } else {
+    colorName = selVal;
+  }
+  S.salesRecords.push({ id: newId(), productId, date, qty, unitPrice, note, colorName, itemId, itemName });
   save(); renderTodaySummary(); renderDashboard();
   document.getElementById('saleQty').value = 1;
   document.getElementById('saleNote').value = '';
@@ -1709,7 +2037,7 @@ function renderSaleHistory() {
     const p = S.products.find(x => x.id === r.productId);
     return `<div class="sale-row">
       <div>
-        <div class="font-bold text-sm">${esc(p?.name||'不明商品')}${r.colorName ? ` <span style="font-size:11px;color:var(--primary);font-weight:400">[${esc(r.colorName)}]</span>` : ''}</div>
+        <div class="font-bold text-sm">${esc(p?.name||'不明商品')}${r.itemName ? ` <span style="font-size:11px;color:#0369a1;font-weight:400">[${esc(r.itemName)}]</span>` : r.colorName ? ` <span style="font-size:11px;color:var(--primary);font-weight:400">[${esc(r.colorName)}]</span>` : ''}</div>
         <div class="text-sm text-muted">${r.date} ・ ${r.qty}個 @¥${fmt(r.unitPrice)}${r.note ? ' ・ '+esc(r.note) : ''}</div>
       </div>
       <div class="text-right" style="display:flex;align-items:center;gap:8px">
@@ -1722,6 +2050,13 @@ function renderSaleHistory() {
 
 function deleteSale(id) {
   if (!confirm('この販売記録を削除しますか？')) return;
+  const r = S.salesRecords.find(x => x.id === id);
+  // 個体管理モードの作品なら在庫に戻す
+  if (r?.itemId) {
+    const p = S.products.find(x => x.id === r.productId);
+    const item = (p?.items || []).find(i => i.id === r.itemId);
+    if (item) item.status = 'available';
+  }
   S.salesRecords = S.salesRecords.filter(r => r.id !== id);
   save(); renderSaleHistory(); renderDashboard(); toast('削除しました');
 }
