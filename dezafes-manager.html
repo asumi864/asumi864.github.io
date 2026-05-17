@@ -385,6 +385,18 @@ body {
   <!-- Dashboard -->
   <div id="home-dashboard">
     <div class="stats-grid" id="statsGrid"></div>
+    <div class="card" id="goalCard" style="margin-bottom:12px">
+      <div class="card-title">🎯 目標・完売試算</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <label style="font-size:12px;color:var(--muted);flex-shrink:0">目標売上</label>
+        <div style="position:relative;flex:1">
+          <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px">¥</span>
+          <input type="number" id="goalSalesInput" class="form-input" min="0" placeholder="0"
+            style="padding-left:24px" oninput="saveGoalSales(this.value)">
+        </div>
+      </div>
+      <div id="selloutForecast"></div>
+    </div>
     <div class="card" id="productProgress"></div>
     <div class="card" id="recentSales"></div>
     <div class="card" style="padding:14px 16px">
@@ -456,9 +468,10 @@ body {
       <button class="btn btn-primary btn-sm" onclick="openModal('product')">＋ 追加</button>
     </div>
     <div class="sort-bar">
-      <label>並べ替え:</label>
-      <select id="productSortSelect" class="form-select" style="height:32px;font-size:12px;flex:1" onchange="changeProductSort(this.value)">
-        <option value="custom">カスタム順（↑↓ボタンで並替）</option>
+      <span style="font-size:14px;flex-shrink:0">⇅</span>
+      <span style="font-size:12px;color:var(--muted);flex-shrink:0">並べ替え</span>
+      <select id="productSortSelect" class="form-select" style="height:30px;font-size:12px;flex:1;min-width:0" onchange="changeProductSort(this.value)">
+        <option value="custom">カスタム</option>
         <option value="name">名前順</option>
         <option value="category">カテゴリ順</option>
       </select>
@@ -468,6 +481,16 @@ body {
   <!-- 在庫・制作 -->
   <div id="prod-inventory" style="display:none">
     <div class="info-box">💡 完成数を入力してください。カラーを登録した商品はカラーごとに管理できます。在庫 ＝ 完成数 − 販売数</div>
+    <div class="sort-bar">
+      <span style="font-size:14px;flex-shrink:0">⇅</span>
+      <span style="font-size:12px;color:var(--muted);flex-shrink:0">並べ替え</span>
+      <select id="inventorySortSelect" class="form-select" style="height:30px;font-size:12px;flex:1;min-width:0" onchange="changeInventorySort(this.value)">
+        <option value="custom">カスタム</option>
+        <option value="name">名前順</option>
+        <option value="stock_asc">在庫少ない順</option>
+        <option value="stock_desc">在庫多い順</option>
+      </select>
+    </div>
     <div id="inventoryList"></div>
   </div>
 </div>
@@ -539,7 +562,10 @@ body {
 <div class="overlay" id="overlay-material" onclick="maybeCloseOverlay(event,'material')">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div class="modal-header"><div class="modal-title" id="materialModalTitle">素材を追加</div></div>
+    <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center">
+      <div class="modal-title" id="materialModalTitle">素材を追加</div>
+      <button onclick="closeOverlay('material')" style="background:none;border:none;font-size:22px;color:var(--muted);cursor:pointer;padding:0 4px;line-height:1;flex-shrink:0">✕</button>
+    </div>
     <div class="modal-body">
       <input type="hidden" id="editMaterialId">
       <div class="form-group">
@@ -684,6 +710,21 @@ body {
       </div>
       <div class="text-sm text-muted mb-2">梱包資材・シール・タグなど商品1個あたりの費用</div>
       <div id="directCostRows"></div>
+      <div class="hr" style="margin:12px 0 10px"></div>
+      <div class="font-bold mb-2" style="font-size:14px">⏱️ 作業時間（人件費）</div>
+      <div class="form-row">
+        <div class="form-group mb-0">
+          <label class="form-label">作業時間（時間/個）</label>
+          <input type="number" id="prodLaborHours" class="form-input" min="0" step="0.1" placeholder="例: 1.5" oninput="refreshLaborPreview()">
+        </div>
+        <div class="form-group mb-0">
+          <label class="form-label">時給（円/時間）</label>
+          <input type="number" id="prodLaborRate" class="form-input" min="0" placeholder="例: 1000" oninput="refreshLaborPreview()">
+        </div>
+      </div>
+      <div id="laborPreview" class="calc-preview inactive mt-2" style="margin-bottom:0">
+        <span>💡</span><span id="laborPreviewText">作業時間と時給を入力すると人件費を自動計算します</span>
+      </div>
 
       <button class="btn btn-primary w-full mt-3" onclick="saveProduct()">保存</button>
     </div>
@@ -694,7 +735,10 @@ body {
 <div class="overlay" id="overlay-fixedCost" onclick="maybeCloseOverlay(event,'fixedCost')">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div class="modal-header"><div class="modal-title" id="fixedCostModalTitle">固定費を追加</div></div>
+    <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center">
+      <div class="modal-title" id="fixedCostModalTitle">固定費を追加</div>
+      <button onclick="closeOverlay('fixedCost')" style="background:none;border:none;font-size:22px;color:var(--muted);cursor:pointer;padding:0 4px;line-height:1;flex-shrink:0">✕</button>
+    </div>
     <div class="modal-body">
       <input type="hidden" id="editFixedCostId">
       <div class="form-group">
@@ -730,7 +774,10 @@ body {
 <div class="overlay" id="overlay-priceAdvisor" onclick="maybeCloseOverlay(event,'priceAdvisor')">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div class="modal-header"><div class="modal-title" id="priceAdvisorTitle">💡 価格アドバイス</div></div>
+    <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center">
+      <div class="modal-title" id="priceAdvisorTitle">💡 価格アドバイス</div>
+      <button onclick="closeOverlay('priceAdvisor')" style="background:none;border:none;font-size:22px;color:var(--muted);cursor:pointer;padding:0 4px;line-height:1;flex-shrink:0">✕</button>
+    </div>
     <div class="modal-body" id="priceAdvisorBody"></div>
   </div>
 </div>
@@ -739,7 +786,10 @@ body {
 <div class="overlay" id="overlay-invUpdate" onclick="maybeCloseOverlay(event,'invUpdate')">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div class="modal-header"><div class="modal-title" id="invUpdateTitle">制作数を更新</div></div>
+    <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center">
+      <div class="modal-title" id="invUpdateTitle">制作数を更新</div>
+      <button onclick="closeOverlay('invUpdate')" style="background:none;border:none;font-size:22px;color:var(--muted);cursor:pointer;padding:0 4px;line-height:1;flex-shrink:0">✕</button>
+    </div>
     <div class="modal-body">
       <input type="hidden" id="invUpdateProductId">
       <div id="invUpdateBody"></div>
@@ -752,7 +802,10 @@ body {
 <div class="overlay" id="overlay-todo" onclick="maybeCloseOverlay(event,'todo')">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div class="modal-header"><div class="modal-title" id="todoModalTitle">タスクを追加</div></div>
+    <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center">
+      <div class="modal-title" id="todoModalTitle">タスクを追加</div>
+      <button onclick="closeOverlay('todo')" style="background:none;border:none;font-size:22px;color:var(--muted);cursor:pointer;padding:0 4px;line-height:1;flex-shrink:0">✕</button>
+    </div>
     <div class="modal-body">
       <input type="hidden" id="editTodoId">
       <div class="form-group">
@@ -796,6 +849,7 @@ let S = {
   fixedCosts: [],
   salesRecords: [],
   todos: [],
+  settings: { goalSales: 0 },
   _id: 1
 };
 
@@ -813,6 +867,8 @@ function load() {
   S.fixedCosts   = S.fixedCosts   || [];
   S.salesRecords = S.salesRecords || [];
   S.todos        = S.todos        || [];
+  S.settings     = S.settings     || { goalSales: 0 };
+  S.settings.goalSales = S.settings.goalSales || 0;
   S._id = S._id || 1;
 }
 
@@ -951,6 +1007,9 @@ function calcOutsourceCost(product) {
 function calcDirectCost(product) {
   return (product.directCosts || []).reduce((s, c) => s + (c.amount || 0), 0);
 }
+function calcLaborCost(product) {
+  return (product.laborHours || 0) * (product.laborRate || 0);
+}
 function totalFixedCostAmount() {
   return S.fixedCosts.reduce((s, c) => s + c.amount, 0);
 }
@@ -974,7 +1033,7 @@ function calcSetCost(product) {
 }
 function calcTotalCost(product) {
   if (product.type === 'set') return calcSetCost(product);
-  return calcMaterialCost(product) + calcOutsourceCost(product) + calcDirectCost(product) + fixedCostPerUnit(product);
+  return calcMaterialCost(product) + calcOutsourceCost(product) + calcDirectCost(product) + calcLaborCost(product) + fixedCostPerUnit(product);
 }
 
 function getPriceAdvice(product) {
@@ -986,13 +1045,14 @@ function getPriceAdvice(product) {
     return { matCost:0, outCost:0, dirCost:setCost, fixCost, total,
       min: round100(total * 1.3), std: round100(total * 2.5), pre: round100(total * 3.5) };
   }
-  const matCost = calcMaterialCost(product);
-  const outCost = calcOutsourceCost(product);
-  const dirCost = calcDirectCost(product);
-  const fixCost = fixedCostPerUnit(product);
-  const total   = matCost + outCost + dirCost + fixCost;
+  const matCost   = calcMaterialCost(product);
+  const outCost   = calcOutsourceCost(product);
+  const dirCost   = calcDirectCost(product);
+  const laborCost = calcLaborCost(product);
+  const fixCost   = fixedCostPerUnit(product);
+  const total     = matCost + outCost + dirCost + laborCost + fixCost;
   return {
-    matCost, outCost, dirCost, fixCost, total,
+    matCost, outCost, dirCost, laborCost, fixCost, total,
     min: round100(total * 1.3),
     std: round100(total * 2.5),
     pre: round100(total * 3.5),
@@ -1002,6 +1062,53 @@ function getPriceAdvice(product) {
 // ═══════════════════════════════════════
 // DASHBOARD
 // ═══════════════════════════════════════
+function saveGoalSales(val) {
+  S.settings.goalSales = parseInt(val) || 0;
+  save(); renderGoalCard();
+}
+
+function renderGoalCard() {
+  const goalInput = document.getElementById('goalSalesInput');
+  if (goalInput && !goalInput.matches(':focus')) goalInput.value = S.settings.goalSales || '';
+
+  // 全在庫完売時の試算
+  const remainSales = S.products.reduce((s, p) => {
+    const stock = Math.max(stockQty(p), 0);
+    return s + stock * (p.suggestedPrice || 0);
+  }, 0);
+  const remainCost = S.products.reduce((s, p) => {
+    const stock = Math.max(stockQty(p), 0);
+    return s + stock * calcTotalCost(p);
+  }, 0);
+  const alreadySales = S.salesRecords.reduce((s,r) => s + r.qty * r.unitPrice, 0);
+  const totalIfSellout = alreadySales + remainSales;
+  const totalProfit = totalIfSellout - S.products.reduce((s, p) => {
+    return s + effectiveProduced(p) * calcTotalCost(p);
+  }, 0);
+  const goal = S.settings.goalSales || 0;
+  const remaining = goal - alreadySales;
+  const goalPct = goal ? Math.min(100, Math.round(alreadySales / goal * 100)) : 0;
+
+  const forecastEl = document.getElementById('selloutForecast');
+  if (!forecastEl) return;
+  forecastEl.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+      <div style="background:var(--bg);border-radius:10px;padding:10px;text-align:center">
+        <div style="font-size:11px;color:var(--muted)">完売時 予想売上</div>
+        <div style="font-size:18px;font-weight:800;color:var(--success)">¥${fmt(totalIfSellout)}</div>
+      </div>
+      <div style="background:var(--bg);border-radius:10px;padding:10px;text-align:center">
+        <div style="font-size:11px;color:var(--muted)">完売時 予想利益</div>
+        <div style="font-size:18px;font-weight:800;color:${totalProfit>=0?'var(--primary)':'var(--danger)'}">¥${fmt(totalProfit)}</div>
+      </div>
+    </div>
+    ${goal ? `
+    <div style="font-size:12px;color:var(--muted);margin-bottom:4px">目標達成率 ${goalPct}%（あと ¥${fmt(Math.max(remaining,0))}）</div>
+    <div class="progress-bar"><div class="progress-fill ${goalPct>=100?'p-success':'p-primary'}" style="width:${goalPct}%"></div></div>
+    ` : '<div class="text-muted text-sm">目標売上を入力すると達成率が表示されます</div>'}
+  `;
+}
+
 function renderDashboard() {
   const totalSales = S.salesRecords.reduce((s,r) => s + r.qty * r.unitPrice, 0);
   const totalSoldQty = S.salesRecords.reduce((s,r) => s + r.qty, 0);
@@ -1015,6 +1122,8 @@ function renderDashboard() {
     <div class="stat-card"><div class="stat-label">🎯 目標制作</div><div class="stat-value">${totalTarget}</div><div class="stat-sub">個</div></div>
     <div class="stat-card"><div class="stat-label">✅ 制作完了</div><div class="stat-value">${totalProduced}</div><div class="stat-sub">/ ${totalTarget}個</div></div>
   `;
+
+  renderGoalCard();
 
   // Product progress
   const pRows = S.products.map(p => {
@@ -1115,6 +1224,9 @@ function openModal(type, extra) {
     document.getElementById('outsourceCostRows').innerHTML = '';
     document.getElementById('setComponentRows').innerHTML = '';
     document.getElementById('individualMode').checked = false;
+    document.getElementById('prodLaborHours').value = '';
+    document.getElementById('prodLaborRate').value  = '';
+    refreshLaborPreview();
     setProductType('handmade');
   }
   if (type === 'fixedCost') {
@@ -1202,10 +1314,16 @@ function deleteMaterial(id) {
 // PRODUCTS
 // ═══════════════════════════════════════
 let productSortMode = 'custom';
+let inventorySortMode = 'custom';
 
 function changeProductSort(mode) {
   productSortMode = mode;
   renderProducts();
+}
+
+function changeInventorySort(mode) {
+  inventorySortMode = mode;
+  renderInventory();
 }
 
 function moveProduct(productId, direction) {
@@ -1480,19 +1598,49 @@ function addComponentRow(data) {
       <button class="btn-icon-sm" onclick="document.getElementById('${rowId}').remove()">🗑️</button>
     </div>
     <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
-      <input type="number" class="form-input comp-amount" min="0" step="0.01" value="${data?.amount||''}" placeholder="使用量（例: 10）" style="flex:1">
+      <input type="number" class="form-input comp-amount" min="0" step="0.01" value="${data?.amount||''}" placeholder="使用量（例: 10）" style="flex:1" oninput="refreshCompCost('${rowId}')">
       <span class="comp-unit-label text-muted text-sm" style="white-space:nowrap;min-width:24px"></span>
     </div>
+    <div class="comp-cost-preview" id="ccost_${rowId}" style="font-size:11px;color:var(--success);font-weight:700;margin-top:3px;min-height:14px"></div>
   `;
-  // show unit label
+  // show unit label + cost preview
   const sel = div.querySelector('.comp-material');
   const updateUnit = () => {
     const mat = S.materials.find(m => m.id === sel.value);
     div.querySelector('.comp-unit-label').textContent = mat ? mat.unit : '';
+    refreshCompCost(rowId);
   };
   sel.addEventListener('change', updateUnit);
   updateUnit();
   document.getElementById('componentRows').appendChild(div);
+}
+
+function refreshCompCost(rowId) {
+  const card = document.getElementById(rowId);
+  if (!card) return;
+  const matId  = card.querySelector('.comp-material')?.value;
+  const amount = parseFloat(card.querySelector('.comp-amount')?.value) || 0;
+  const mat    = S.materials.find(m => m.id === matId);
+  const el     = document.getElementById('ccost_' + rowId);
+  if (!el) return;
+  el.textContent = (mat && amount > 0)
+    ? `→ 素材費: ¥${(mat.unitCost * amount).toFixed(2)}（¥${mat.unitCost.toFixed(2)}/${mat.unit} × ${amount}${mat.unit}）`
+    : '';
+}
+
+function refreshLaborPreview() {
+  const hours = parseFloat(document.getElementById('prodLaborHours')?.value) || 0;
+  const rate  = parseFloat(document.getElementById('prodLaborRate')?.value)  || 0;
+  const el    = document.getElementById('laborPreview');
+  const txt   = document.getElementById('laborPreviewText');
+  if (!el || !txt) return;
+  if (hours > 0 && rate > 0) {
+    el.className = 'calc-preview mt-2';
+    txt.textContent = `人件費: ¥${fmt(hours * rate)}（${hours}時間 × ¥${fmt(rate)}/時間）`;
+  } else {
+    el.className = 'calc-preview inactive mt-2';
+    txt.textContent = '作業時間と時給を入力すると人件費を自動計算します';
+  }
 }
 
 function addDirectCostRow(data) {
@@ -1538,6 +1686,9 @@ function editProduct(id) {
   (p.colors||[]).forEach(c => addColorRow(c));
   (p.outsourceCosts||[]).forEach(c => addOutsourceCostRow(c));
   (p.setComponents||[]).forEach(c => addSetComponentRow(c));
+  document.getElementById('prodLaborHours').value = p.laborHours || '';
+  document.getElementById('prodLaborRate').value  = p.laborRate  || '';
+  refreshLaborPreview();
   showOverlay('product');
 }
 
@@ -1586,6 +1737,8 @@ function saveProduct() {
     category:       document.getElementById('prodCat').value.trim(),
     targetQty:      parseInt(document.getElementById('prodTarget').value) || 0,
     suggestedPrice: parseInt(document.getElementById('prodSuggestedPrice').value) || 0,
+    laborHours:     parseFloat(document.getElementById('prodLaborHours').value) || 0,
+    laborRate:      parseFloat(document.getElementById('prodLaborRate').value)  || 0,
     components, directCosts, colors, outsourceCosts, setComponents
   };
   const editId = document.getElementById('editProductId').value;
@@ -1649,6 +1802,7 @@ function showPriceAdvisor(productId) {
       : `<div class="cost-row"><span>素材費</span><span class="font-bold">¥${fmt(a.matCost)}</span></div>`
     }
     ${!isSet ? `<div class="cost-row"><span>直接費（梱包等）</span><span class="font-bold">¥${fmt(a.dirCost)}</span></div>` : ''}
+    ${a.laborCost > 0 ? `<div class="cost-row"><span>⏱️ 人件費（${p.laborHours}h × ¥${fmt(p.laborRate)}/h）</span><span class="font-bold" style="color:#7c3aed">¥${fmt(a.laborCost)}</span></div>` : ''}
     <div class="cost-row"><span>固定費配分</span><span class="font-bold">¥${fmt(a.fixCost)}</span></div>
     <div class="cost-row total"><span>1個あたり推定原価</span><span>¥${fmt(a.total)}</span></div>
     <div class="hr"></div>
@@ -1779,7 +1933,13 @@ function renderInventory() {
     el.innerHTML = '<div class="empty"><div class="ico">📦</div><p>商品を追加してください</p></div>';
     return;
   }
-  el.innerHTML = S.products.map(p => {
+  const selInv = document.getElementById('inventorySortSelect');
+  if (selInv) selInv.value = inventorySortMode;
+  let prods = [...S.products];
+  if (inventorySortMode === 'name') prods.sort((a,b) => a.name.localeCompare(b.name, 'ja'));
+  else if (inventorySortMode === 'stock_asc') prods.sort((a,b) => Math.max(stockQty(a),0) - Math.max(stockQty(b),0));
+  else if (inventorySortMode === 'stock_desc') prods.sort((a,b) => Math.max(stockQty(b),0) - Math.max(stockQty(a),0));
+  el.innerHTML = prods.map(p => {
     const prod  = effectiveProduced(p);
     const tgt   = effectiveTarget(p);
     const stock = Math.max(stockQty(p), 0);
